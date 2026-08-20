@@ -1,0 +1,286 @@
+---
+const headline = ['We', 'craft', 'fast,', 'considered', 'web', 'experiences.'];
+---
+
+<section id="home" class="hero" data-hero>
+	<div class="hero-bg" aria-hidden="true">
+		<span class="blob blob-a" data-blob="a"></span>
+		<span class="blob blob-b" data-blob="b"></span>
+		<span class="blob blob-c" data-blob="c"></span>
+		<span class="grid-overlay"></span>
+	</div>
+
+	<div class="container hero-content">
+		<p class="eyebrow" data-anim data-hero-eyebrow>Digital studio · Web engineering</p>
+
+		<h1 class="hero-title">
+			{
+				headline.map((word) => (
+					<span class="word-mask">
+						<span class="word" data-anim data-hero-word>
+							{word}
+						</span>
+					</span>
+				))
+			}
+		</h1>
+
+		<p class="hero-sub" data-anim data-hero-sub>
+			Iterate Prairie Tech partners with ambitious teams to design, build, and ship
+			high-performance websites — polished motion, rock-solid performance, and an
+			obsessive eye for detail.
+		</p>
+
+		<div class="hero-cta" data-hero-cta>
+			<a class="btn btn-primary" href="#services" data-cta>View services</a>
+			<a class="btn btn-ghost" href="#contact" data-cta>Start a project</a>
+		</div>
+	</div>
+
+	<a class="scroll-cue" href="#services" data-anim data-scrollcue aria-label="Scroll to services">
+		<span class="scroll-cue__dot"></span>
+	</a>
+</section>
+
+<style>
+	.hero {
+		position: relative;
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		padding-top: calc(var(--nav-h) + 2rem);
+		overflow: hidden;
+	}
+
+	.hero-bg {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+	}
+
+	.blob {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(70px);
+		opacity: 0.55;
+		will-change: transform;
+	}
+
+	.blob-a {
+		width: 520px;
+		height: 520px;
+		top: -140px;
+		left: -120px;
+		background: radial-gradient(circle at 30% 30%, #7c5cff, transparent 60%);
+	}
+
+	.blob-b {
+		width: 620px;
+		height: 620px;
+		bottom: -200px;
+		right: -140px;
+		background: radial-gradient(circle at 60% 40%, #00d4ff, transparent 60%);
+	}
+
+	.blob-c {
+		width: 380px;
+		height: 380px;
+		top: 25%;
+		left: 45%;
+		background: radial-gradient(circle, #bc52ee, transparent 60%);
+		opacity: 0.4;
+	}
+
+	.grid-overlay {
+		position: absolute;
+		inset: 0;
+		background-image:
+			linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+		background-size: 64px 64px;
+		-webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000, transparent 75%);
+		mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000, transparent 75%);
+	}
+
+	.hero-content {
+		position: relative;
+		z-index: 1;
+		max-width: 60rem;
+	}
+
+	.eyebrow {
+		color: var(--accent-2);
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		margin-bottom: 1.25rem;
+	}
+
+	.hero-title {
+		font-size: clamp(2.5rem, 6vw, 4.75rem);
+		line-height: 1.05;
+		margin-bottom: 1.5rem;
+	}
+
+	.word-mask {
+		display: inline-block;
+		overflow: hidden;
+		vertical-align: top;
+	}
+
+	.word {
+		display: inline-block;
+		will-change: transform;
+	}
+
+	.hero-sub {
+		color: var(--muted);
+		font-size: clamp(1rem, 1.4vw, 1.2rem);
+		max-width: 42rem;
+		margin-bottom: 2.25rem;
+	}
+
+	.hero-cta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.85rem 1.5rem;
+		border-radius: 12px;
+		font-weight: 600;
+		font-size: 0.97rem;
+		border: 1px solid transparent;
+		will-change: transform;
+	}
+
+	.btn-primary {
+		color: #0b0c12;
+		background: var(--accent-grad);
+		box-shadow: 0 10px 30px -10px rgba(124, 92, 255, 0.6);
+	}
+
+	.btn-ghost {
+		color: var(--text);
+		border-color: var(--border);
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	.scroll-cue {
+		position: absolute;
+		bottom: 1.75rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 1;
+		width: 26px;
+		height: 42px;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		display: flex;
+		justify-content: center;
+		padding-top: 7px;
+	}
+
+	.scroll-cue__dot {
+		width: 4px;
+		height: 8px;
+		border-radius: 2px;
+		background: var(--accent-2);
+	}
+
+	/* Hide animatable elements until JS runs, to avoid a flash before entrance. */
+	:global(html.js) [data-anim] {
+		opacity: 0;
+	}
+
+	@media (max-width: 640px) {
+		.scroll-cue {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	import gsap from 'gsap';
+	import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+	gsap.registerPlugin(ScrollTrigger);
+
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const words = gsap.utils.toArray<HTMLElement>('[data-hero-word]');
+	const blobs = gsap.utils.toArray<HTMLElement>('[data-blob]');
+
+	if (prefersReduced) {
+		gsap.set('[data-anim]', { opacity: 1, y: 0, clearProps: 'transform' });
+	} else {
+		const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+		tl.fromTo('[data-hero-eyebrow]', { y: 18 }, { opacity: 1, y: 0, duration: 0.6 })
+			.fromTo(
+				words,
+				{ yPercent: 115 },
+				{ opacity: 1, yPercent: 0, duration: 0.85, stagger: 0.07 },
+				'-=0.25',
+			)
+			.fromTo('[data-hero-sub]', { y: 18 }, { opacity: 1, y: 0, duration: 0.6 }, '-=0.45')
+			.fromTo(
+				'[data-hero-cta] > *',
+				{ y: 14 },
+				{ opacity: 1, y: 0, duration: 0.5, stagger: 0.09 },
+				'-=0.35',
+			)
+			.fromTo('[data-scrollcue]', {}, { opacity: 1, duration: 0.5 }, '-=0.2');
+
+		// Gentle floating motion for the background blobs.
+		const floats = [
+			{ y: 36, x: 18, dur: 8 },
+			{ y: -28, x: -20, dur: 10 },
+			{ y: 22, x: -12, dur: 7 },
+		];
+		blobs.forEach((blob, i) => {
+			gsap.to(blob, {
+				...floats[i % floats.length],
+				duration: floats[i % floats.length].dur,
+				repeat: -1,
+				yoyo: true,
+				ease: 'sine.inOut',
+			});
+		});
+
+		// Parallax: background drifts down, content fades/lifts as you scroll away.
+		gsap.to('.hero-bg', {
+			yPercent: 18,
+			ease: 'none',
+			scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
+		});
+		gsap.to('.hero-content', {
+			y: -50,
+			opacity: 0.25,
+			ease: 'none',
+			scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
+		});
+
+		// Scroll-cue dot bounce.
+		gsap.to('.scroll-cue__dot', {
+			y: 12,
+			opacity: 0.3,
+			duration: 1.1,
+			repeat: -1,
+			yoyo: true,
+			ease: 'power1.inOut',
+		});
+
+		// Button hover.
+		gsap.utils.toArray<HTMLElement>('[data-cta]').forEach((btn) => {
+			const hov = gsap.timeline({ paused: true });
+			hov.to(btn, { y: -3, scale: 1.025, duration: 0.25, ease: 'power2.out' });
+			btn.addEventListener('mouseenter', () => hov.play());
+			btn.addEventListener('mouseleave', () => hov.reverse());
+		});
+	}
+</script>

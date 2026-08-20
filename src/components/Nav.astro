@@ -1,0 +1,244 @@
+---
+interface NavLink {
+	label: string;
+	href: string;
+}
+
+const links: NavLink[] = [
+	{ label: 'Home', href: '#home' },
+	{ label: 'Services', href: '#services' },
+	{ label: 'Work', href: '#work' },
+	{ label: 'Contact', href: '#contact' },
+];
+---
+
+<header class="site-nav" data-nav>
+	<div class="container nav-inner">
+		<a class="brand" href="#home" data-nav-link>
+			<span class="brand-mark" aria-hidden="true"></span>
+			<span class="brand-text">Iterate<span class="brand-accent">Prairie</span></span>
+		</a>
+
+		<nav class="nav-links" data-nav-links>
+			{
+				links.map((l) => (
+					<a class="nav-link" href={l.href} data-nav-link>
+						<span class="nav-link__label">{l.label}</span>
+						<span class="nav-link__underline" aria-hidden="true" />
+					</a>
+				))
+			}
+		</nav>
+
+		<button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false">
+			<span></span>
+			<span></span>
+			<span></span>
+		</button>
+	</div>
+</header>
+
+<style>
+	.site-nav {
+		position: fixed;
+		inset: 0 0 auto 0;
+		z-index: 100;
+		height: var(--nav-h);
+		display: flex;
+		align-items: center;
+		background: rgba(11, 12, 18, 0);
+		backdrop-filter: blur(0);
+		transition:
+			background 0.3s ease,
+			backdrop-filter 0.3s ease,
+			border-color 0.3s ease;
+		border-bottom: 1px solid transparent;
+	}
+
+	.site-nav.is-scrolled {
+		background: rgba(11, 12, 18, 0.72);
+		backdrop-filter: blur(14px);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.nav-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-weight: 700;
+		font-size: 1.05rem;
+		letter-spacing: -0.01em;
+	}
+
+	.brand-mark {
+		width: 1.4rem;
+		height: 1.4rem;
+		border-radius: 6px;
+		background: var(--accent-grad);
+		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+	}
+
+	.brand-accent {
+		color: var(--accent-2);
+	}
+
+	.nav-links {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.nav-link {
+		position: relative;
+		display: inline-flex;
+		padding: 0.5rem 0.85rem;
+		color: var(--muted);
+		font-size: 0.95rem;
+		font-weight: 500;
+		transition: color 0.25s ease;
+	}
+
+	.nav-link__underline {
+		position: absolute;
+		left: 0.85rem;
+		right: 0.85rem;
+		bottom: 0.25rem;
+		height: 2px;
+		border-radius: 2px;
+		background: var(--accent-grad);
+		transform: scaleX(0);
+		transform-origin: left center;
+	}
+
+	.nav-toggle {
+		display: none;
+		flex-direction: column;
+		justify-content: center;
+		gap: 5px;
+		width: 40px;
+		height: 40px;
+		padding: 0;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+	}
+
+	.nav-toggle span {
+		display: block;
+		width: 18px;
+		height: 2px;
+		margin-inline: auto;
+		background: var(--text);
+		border-radius: 2px;
+	}
+
+	@media (max-width: 860px) {
+		.nav-toggle {
+			display: flex;
+		}
+
+		.nav-links {
+			position: absolute;
+			top: var(--nav-h);
+			left: 0;
+			right: 0;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0;
+			padding: 0.5rem 1.5rem 1.25rem;
+			background: rgba(11, 12, 18, 0.96);
+			backdrop-filter: blur(14px);
+			border-bottom: 1px solid var(--border);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.25s ease;
+		}
+
+		.site-nav.is-open .nav-links {
+			opacity: 1;
+			pointer-events: auto;
+		}
+
+		.nav-link {
+			padding: 0.85rem 0.25rem;
+			border-bottom: 1px solid var(--border);
+		}
+
+		.nav-link__underline {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	import gsap from 'gsap';
+
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const nav = document.querySelector<HTMLElement>('[data-nav]');
+	const navLinks = gsap.utils.toArray<HTMLElement>('[data-nav-link]');
+	const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+	const panel = document.querySelector<HTMLElement>('[data-nav-links]');
+
+	if (nav) {
+		const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 8);
+		window.addEventListener('scroll', onScroll, { passive: true });
+		onScroll();
+	}
+
+	// Desktop link hover: animated underline + color shift.
+	navLinks.forEach((link) => {
+		const underline = link.querySelector<HTMLElement>('.nav-link__underline');
+
+		if (underline && !prefersReduced) {
+			const tl = gsap.timeline({ paused: true });
+			tl.to(underline, { scaleX: 1, duration: 0.35, ease: 'power3.out' }).to(
+				link,
+				{ color: '#00d4ff', duration: 0.35 },
+				0,
+			);
+			link.addEventListener('mouseenter', () => tl.play());
+			link.addEventListener('mouseleave', () => tl.reverse());
+		} else if (underline) {
+			link.addEventListener('mouseenter', () => (underline.style.transform = 'scaleX(1)'));
+			link.addEventListener('mouseleave', () => (underline.style.transform = 'scaleX(0)'));
+		}
+
+		// Close the mobile menu on selection; smooth scroll is handled globally.
+		link.addEventListener('click', closeMenu);
+	});
+
+	// Mobile menu.
+	let menuOpen = false;
+	const lines = toggle ? Array.from(toggle.querySelectorAll('span')) : [];
+
+	function setMenu(open: boolean) {
+		menuOpen = open;
+		nav?.classList.toggle('is-open', open);
+		if (toggle) toggle.setAttribute('aria-expanded', String(open));
+		if (toggle && !prefersReduced) {
+			gsap.to(lines[0], { y: open ? 7 : 0, rotation: open ? 45 : 0, duration: 0.3, ease: 'power2.inOut' });
+			gsap.to(lines[1], { opacity: open ? 0 : 1, duration: 0.2 });
+			gsap.to(lines[2], { y: open ? -7 : 0, rotation: open ? -45 : 0, duration: 0.3, ease: 'power2.inOut' });
+		}
+	}
+	function closeMenu() {
+		if (menuOpen) setMenu(false);
+	}
+
+	toggle?.addEventListener('click', () => setMenu(!menuOpen));
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') closeMenu();
+	});
+
+	// Nav entrance.
+	if (nav && !prefersReduced) {
+		gsap.from(nav, { y: -40, opacity: 0, duration: 0.8, ease: 'power3.out', delay: 0.15 });
+	}
+</script>

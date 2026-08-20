@@ -1,0 +1,182 @@
+---
+interface Project {
+	name: string;
+	tag: string;
+	year: string;
+}
+
+const projects: Project[] = [
+	{ name: 'Northwind Labs', tag: 'Marketing site + Astro CMS', year: '2025' },
+	{ name: 'Halcyon Finance', tag: 'Product landing + motion system', year: '2025' },
+	{ name: 'Field & Form', tag: 'Headless storefront', year: '2024' },
+	{ name: 'Cadence Health', tag: 'Docs platform + SEO', year: '2024' },
+];
+---
+
+<section id="work" class="section work" data-work>
+	<div class="container">
+		<header class="section-head">
+			<p class="kicker" data-anim data-kicker>Selected work</p>
+			<h2 class="section-title" data-anim data-title>Recent projects.</h2>
+		</header>
+
+		<div class="grid">
+			{
+				projects.map((p, i) => (
+					<a class="project" href="#" data-anim data-project style={`--i:${i}`}>
+						<div class="project-top">
+							<span class="project-year">{p.year}</span>
+							<span class="project-arrow" aria-hidden="true">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+							</span>
+						</div>
+						<h3>{p.name}</h3>
+						<p class="project-tag">{p.tag}</p>
+					</a>
+				))
+			}
+		</div>
+	</div>
+</section>
+
+<style>
+	.work {
+		background: var(--bg);
+	}
+
+	.section-head {
+		max-width: 44rem;
+		margin-bottom: 3rem;
+	}
+
+	.kicker {
+		color: var(--accent-2);
+		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		margin-bottom: 0.85rem;
+	}
+
+	.section-title {
+		font-size: clamp(1.9rem, 4vw, 2.85rem);
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 1.25rem;
+	}
+
+	.project {
+		display: block;
+		padding: 1.75rem;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		transition: border-color 0.3s ease;
+		will-change: transform;
+	}
+
+	.project-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 3.5rem;
+	}
+
+	.project-year {
+		color: var(--muted);
+		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+	}
+
+	.project-arrow {
+		width: 38px;
+		height: 38px;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		border: 1px solid var(--border);
+		color: var(--text);
+	}
+
+	.project-arrow svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.project h3 {
+		font-size: 1.4rem;
+		margin-bottom: 0.35rem;
+	}
+
+	.project-tag {
+		color: var(--muted);
+		font-size: 0.95rem;
+	}
+
+	:global(html.js) [data-anim] {
+		opacity: 0;
+	}
+
+	@media (max-width: 700px) {
+		.grid {
+			grid-template-columns: 1fr;
+		}
+		.project-top {
+			margin-bottom: 2.5rem;
+		}
+	}
+</style>
+
+<script>
+	import gsap from 'gsap';
+	import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+	gsap.registerPlugin(ScrollTrigger);
+
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const projects = gsap.utils.toArray<HTMLElement>('[data-project]');
+
+	if (prefersReduced) {
+		gsap.set('[data-anim]', { opacity: 1, y: 0, clearProps: 'transform' });
+	} else {
+		gsap.fromTo('[data-kicker]', { y: 16 }, { opacity: 1, y: 0, duration: 0.6, scrollTrigger: { trigger: '[data-work]', start: 'top 80%' } });
+		gsap.fromTo('[data-title]', { y: 18 }, { opacity: 1, y: 0, duration: 0.6, scrollTrigger: { trigger: '[data-work]', start: 'top 80%' } });
+
+		gsap.fromTo(
+			projects,
+			{ y: 30 },
+			{
+				opacity: 1,
+				y: 0,
+				duration: 0.6,
+				stagger: 0.1,
+				ease: 'power3.out',
+				scrollTrigger: { trigger: '.grid', start: 'top 82%' },
+			},
+		);
+
+		projects.forEach((card) => {
+			const arrow = card.querySelector('.project-arrow svg');
+			const hov = gsap.timeline({ paused: true });
+			hov.to(card, { y: -6, duration: 0.3, ease: 'power2.out' }, 0).to(
+				arrow,
+				{ x: 4, duration: 0.3, ease: 'power2.out' },
+				0,
+			);
+			card.addEventListener('mouseenter', () => {
+				card.style.borderColor = 'rgba(124, 92, 255, 0.45)';
+				hov.play();
+			});
+			card.addEventListener('mouseleave', () => {
+				card.style.borderColor = '';
+				hov.reverse();
+			});
+		});
+	}
+</script>

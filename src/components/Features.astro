@@ -1,0 +1,225 @@
+---
+interface Service {
+	title: string;
+	desc: string;
+	icon: 'design' | 'engine' | 'motion' | 'perf' | 'cms' | 'seo';
+}
+
+const services: Service[] = [
+	{ title: 'Web Design', desc: 'Brand-aligned layouts and design systems that look sharp on every screen.', icon: 'design' },
+	{ title: 'Front-End Engineering', desc: 'Type-safe Astro + component code that is clean, documented, and easy to hand off.', icon: 'engine' },
+	{ title: 'Motion & Interaction', desc: 'GSAP-driven entrances, hover states, and smooth scrolling that feel intentional.', icon: 'motion' },
+	{ title: 'Performance', desc: 'Static-first builds, image budgets, and Core Web Vitals that ship green out of the box.', icon: 'perf' },
+	{ title: 'CMS & Headless', desc: 'Editor-friendly content models wired into Astro content collections.', icon: 'cms' },
+	{ title: 'SEO & Analytics', desc: 'Metadata, sitemaps, and privacy-respecting analytics you can actually trust.', icon: 'seo' },
+];
+---
+
+<section id="services" class="section services" data-services>
+	<div class="container">
+		<header class="section-head">
+			<p class="kicker" data-anim data-kicker>What we do</p>
+			<h2 class="section-title" data-anim data-title>Services built for speed and craft.</h2>
+			<p class="section-sub" data-anim data-sub>
+				A small, senior team covering the full path from idea to launch — design,
+				engineering, motion, and the performance work that makes it all hold up.
+			</p>
+		</header>
+
+		<div class="grid">
+			{
+				services.map((s) => (
+					<article class="card" data-anim data-card>
+						<div class="card-icon" aria-hidden="true">
+							{s.icon === 'design' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<path d="M3 17.5 9 7l4 6 2-3 6 7.5" stroke-linejoin="round" />
+									<circle cx="9" cy="7" r="1.4" fill="currentColor" stroke="none" />
+								</svg>
+							)}
+							{s.icon === 'engine' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<path d="m8 8 5 4-5 4 6-4-6-4Z" stroke-linejoin="round" />
+									<circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+								</svg>
+							)}
+							{s.icon === 'motion' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<path d="M4 12a8 8 0 0 1 16 0" stroke-linecap="round" />
+									<path d="M4 12a8 8 0 0 0 16 0" stroke-linecap="round" />
+									<circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+								</svg>
+							)}
+							{s.icon === 'perf' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<path d="M13 3 4 14h7l-1 7 9-11h-7l1-7Z" stroke-linejoin="round" />
+								</svg>
+							)}
+							{s.icon === 'cms' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<rect x="3" y="4" width="18" height="16" rx="2" />
+									<path d="M3 9h18M8 14h5" stroke-linecap="round" />
+								</svg>
+							)}
+							{s.icon === 'seo' && (
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+									<circle cx="11" cy="11" r="7" />
+									<path d="m20 20-4-4" stroke-linecap="round" />
+								</svg>
+							)}
+						</div>
+						<h3>{s.title}</h3>
+						<p>{s.desc}</p>
+					</article>
+				))
+			}
+		</div>
+	</div>
+</section>
+
+<style>
+	.section {
+		position: relative;
+		padding: 7rem 0;
+	}
+
+	.services {
+		background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+	}
+
+	.section-head {
+		max-width: 44rem;
+		margin-bottom: 3rem;
+	}
+
+	.kicker {
+		color: var(--accent-2);
+		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		margin-bottom: 0.85rem;
+	}
+
+	.section-title {
+		font-size: clamp(1.9rem, 4vw, 2.85rem);
+		margin-bottom: 1rem;
+	}
+
+	.section-sub {
+		color: var(--muted);
+		font-size: 1.05rem;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1.25rem;
+	}
+
+	.card {
+		padding: 1.75rem;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		transition:
+			border-color 0.3s ease,
+			transform 0.3s ease;
+		will-change: transform;
+	}
+
+	.card-icon {
+		width: 44px;
+		height: 44px;
+		display: grid;
+		place-items: center;
+		margin-bottom: 1.25rem;
+		color: var(--accent-2);
+		background: rgba(0, 212, 255, 0.08);
+		border: 1px solid rgba(0, 212, 255, 0.15);
+		border-radius: 10px;
+	}
+
+	.card-icon svg {
+		width: 24px;
+		height: 24px;
+	}
+
+	.card h3 {
+		font-size: 1.15rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.card p {
+		color: var(--muted);
+		font-size: 0.96rem;
+	}
+
+	:global(html.js) [data-anim] {
+		opacity: 0;
+	}
+
+	@media (max-width: 900px) {
+		.grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (max-width: 600px) {
+		.grid {
+			grid-template-columns: 1fr;
+		}
+		.section {
+			padding: 5rem 0;
+		}
+	}
+</style>
+
+<script>
+	import gsap from 'gsap';
+	import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+	gsap.registerPlugin(ScrollTrigger);
+
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const cards = gsap.utils.toArray<HTMLElement>('[data-card]');
+
+	if (prefersReduced) {
+		gsap.set('[data-anim]', { opacity: 1, y: 0, clearProps: 'transform' });
+	} else {
+		const head = { trigger: '[data-services]', start: 'top 80%' };
+		gsap.fromTo('[data-kicker]', { y: 16 }, { opacity: 1, y: 0, duration: 0.6, scrollTrigger: head });
+		gsap.fromTo(
+			'[data-title]',
+			{ y: 18 },
+			{ opacity: 1, y: 0, duration: 0.6, scrollTrigger: head },
+		);
+		gsap.fromTo('[data-sub]', { y: 16 }, { opacity: 1, y: 0, duration: 0.6, scrollTrigger: head });
+
+		gsap.fromTo(
+			cards,
+			{ y: 32 },
+			{
+				opacity: 1,
+				y: 0,
+				duration: 0.6,
+				stagger: 0.08,
+				ease: 'power3.out',
+				scrollTrigger: { trigger: '.grid', start: 'top 82%' },
+			},
+		);
+
+		cards.forEach((card) => {
+			const hov = gsap.timeline({ paused: true });
+			hov.to(card, { y: -6, duration: 0.3, ease: 'power2.out' });
+			card.addEventListener('mouseenter', () => {
+				card.style.borderColor = 'rgba(0, 212, 255, 0.45)';
+				hov.play();
+			});
+			card.addEventListener('mouseleave', () => {
+				card.style.borderColor = '';
+				hov.reverse();
+			});
+		});
+	}
+</script>
