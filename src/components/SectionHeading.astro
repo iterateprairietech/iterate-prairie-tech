@@ -1,0 +1,29 @@
+---
+interface Props {
+	kicker?: string;
+	title: string;
+	lead?: string;
+	align?: 'left' | 'center';
+	class?: string;
+}
+
+const { kicker, title, lead, align = 'left', class: className = '' } = Astro.props;
+---
+
+<div class:list={['section-head', `is-${align}`, className]} data-anim>
+	{kicker && <p class="kicker">{kicker}</p>}
+	<h2 class="section-title">{title}</h2>
+	{lead && <p class="lead">{lead}</p>}
+</div>
+
+<style>
+	.section-head {
+		max-width: 46rem;
+		margin-bottom: 3rem;
+	}
+
+	.section-head.is-center {
+		margin-inline: auto;
+		text-align: center;
+	}
+</style>

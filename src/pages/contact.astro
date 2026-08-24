@@ -1,0 +1,204 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import LoopMark from '../components/LoopMark.astro';
+---
+
+<Layout
+	title="Contact"
+	description="Get in touch with Iterate Prairie Tech — 701-403-5657 or contact@iterateprairietech.com. Serving Breckenridge, MN and the surrounding area."
+	activePath="/contact"
+>
+	<Nav activePath="/contact" />
+	<main>
+		<section class="page-head section">
+			<div class="container">
+				<p class="kicker" data-anim>Contact</p>
+				<h1 class="headline" data-anim>Get in Touch.</h1>
+				<p class="lead" data-anim>
+					Call, text, or email — whichever's easier. We'll figure out what you need and whether
+					it's a quick fix or a real project.
+				</p>
+			</div>
+		</section>
+
+		<section class="section contact-grid" data-contact>
+			<div class="container grid">
+				<a class="contact-card" href="tel:7014035657" data-anim data-card>
+					<div class="contact-card__icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+							<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke-linejoin="round" />
+						</svg>
+					</div>
+					<h2>Phone</h2>
+					<p>701-403-5657</p>
+					<span class="contact-card__action">Call or text <span aria-hidden="true">&rarr;</span></span>
+				</a>
+
+				<a class="contact-card" href="mailto:contact@iterateprairietech.com" data-anim data-card>
+					<div class="contact-card__icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+							<rect x="3" y="5" width="18" height="14" rx="2" />
+							<path d="m3 7 9 6 9-6" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+					</div>
+					<h2>Email</h2>
+					<p>contact@iterateprairietech.com</p>
+					<span class="contact-card__action">Send a message <span aria-hidden="true">&rarr;</span></span>
+				</a>
+
+				<div class="contact-card contact-card--area" data-anim data-card>
+					<div class="contact-card__icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+							<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z" stroke-linejoin="round" />
+							<circle cx="12" cy="10" r="2.5" />
+						</svg>
+					</div>
+					<h2>Service area</h2>
+					<p>Breckenridge, MN and the surrounding area</p>
+					<span class="contact-card__action">On-site visits &middot; Remote anywhere</span>
+				</div>
+			</div>
+		</section>
+
+		<!-- Loop + tagline mark -->
+		<section class="loop-tag" data-loop-tag>
+			<div class="container loop-tag__inner" data-anim>
+				<LoopMark size={128} />
+				<p class="loop-tag__text">Test. Analyze. Adjust. Repeat.</p>
+			</div>
+		</section>
+	</main>
+	<Footer />
+</Layout>
+
+<style>
+	.page-head {
+		padding-top: calc(var(--nav-h) + 4rem);
+	}
+
+	.page-head .lead {
+		margin-top: 1.25rem;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1.25rem;
+	}
+
+	.contact-card {
+		display: flex;
+		flex-direction: column;
+		padding: 2rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--text);
+		will-change: transform;
+	}
+
+	.contact-card__icon {
+		width: 44px;
+		height: 44px;
+		display: grid;
+		place-items: center;
+		margin-bottom: 1.25rem;
+		color: var(--accent);
+		background: rgba(255, 120, 112, 0.08);
+		border: 1px solid rgba(255, 120, 112, 0.15);
+		border-radius: 10px;
+	}
+
+	.contact-card__icon svg {
+		width: 24px;
+		height: 24px;
+	}
+
+	.contact-card h2 {
+		font-size: 1.15rem;
+		text-transform: uppercase;
+		margin-bottom: 0.4rem;
+	}
+
+	.contact-card p {
+		color: var(--muted);
+		margin-bottom: 1.25rem;
+		flex: 1;
+	}
+
+	.contact-card__action {
+		font-family: Sora, Inter, sans-serif;
+		font-weight: 600;
+		font-size: 0.88rem;
+		color: var(--sky);
+	}
+
+	.contact-card--area {
+		cursor: default;
+	}
+
+	.loop-tag {
+		padding: 3rem 0;
+	}
+
+	.loop-tag__inner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.loop-tag__text {
+		font-family: Sora, Inter, sans-serif;
+		font-weight: 700;
+		font-size: 1.05rem;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	@media (max-width: 860px) {
+		.grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<script>
+	import gsap from 'gsap';
+	import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+	gsap.registerPlugin(ScrollTrigger);
+
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	if (prefersReduced) {
+		gsap.set('[data-anim]', { opacity: 1, clearProps: 'transform' });
+	} else {
+		const cards = gsap.utils.toArray<HTMLElement>('[data-contact] [data-card]');
+		gsap.fromTo(
+			cards,
+			{ y: 30 },
+			{ opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', scrollTrigger: { trigger: '[data-contact] .grid', start: 'top 82%' } },
+		);
+
+		cards.forEach((card) => {
+			if (card.classList.contains('contact-card--area')) return;
+			const hov = gsap.timeline({ paused: true });
+			hov.to(card, { y: -6, duration: 0.3, ease: 'power2.out' });
+			card.addEventListener('mouseenter', () => {
+				card.style.borderColor = 'rgba(255, 120, 112, 0.5)';
+				hov.play();
+			});
+			card.addEventListener('mouseleave', () => {
+				card.style.borderColor = '';
+				hov.reverse();
+			});
+		});
+
+		gsap.fromTo('[data-loop-tag] .loop-tag__inner', { y: 20 }, {
+			opacity: 1, y: 0, duration: 0.6, scrollTrigger: { trigger: '[data-loop-tag]', start: 'top 85%' },
+		});
+	}
+</script>

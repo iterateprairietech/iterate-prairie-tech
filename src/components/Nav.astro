@@ -5,29 +5,36 @@ interface NavLink {
 }
 
 const links: NavLink[] = [
-	{ label: 'Home', href: '#home' },
-	{ label: 'Services', href: '#services' },
-	{ label: 'Work', href: '#work' },
-	{ label: 'Contact', href: '#contact' },
+	{ label: 'Home', href: '/' },
+	{ label: 'About', href: '/about' },
+	{ label: 'Services', href: '/services' },
+	{ label: 'Contact', href: '/contact' },
 ];
+
+const { activePath = '/' } = Astro.props;
 ---
 
 <header class="site-nav" data-nav>
 	<div class="container nav-inner">
-		<a class="brand" href="#home" data-nav-link>
-			<span class="brand-mark" aria-hidden="true"></span>
-			<span class="brand-text">Iterate<span class="brand-accent">Prairie</span></span>
+		<a class="brand" href="/" aria-label="Iterate Prairie Tech home">
+			<img src="/Iterate Prairie Tech (Header) (675px by 100px).png" alt="Iterate Prairie Tech" width="675" height="100" />
 		</a>
 
 		<nav class="nav-links" data-nav-links>
 			{
 				links.map((l) => (
-					<a class="nav-link" href={l.href} data-nav-link>
+					<a
+						class:list={['nav-link', { 'is-active': activePath === l.href }]}
+						href={l.href}
+						aria-current={activePath === l.href ? 'page' : undefined}
+						data-nav-link
+					>
 						<span class="nav-link__label">{l.label}</span>
-						<span class="nav-link__underline" aria-hidden="true" />
+						<span class="nav-link__underline" aria-hidden="true"></span>
 					</a>
 				))
 			}
+			<a class="btn btn-primary nav-cta" href="/contact" data-nav-cta>Get in Touch</a>
 		</nav>
 
 		<button class="nav-toggle" data-nav-toggle aria-label="Toggle menu" aria-expanded="false">
@@ -46,17 +53,17 @@ const links: NavLink[] = [
 		height: var(--nav-h);
 		display: flex;
 		align-items: center;
-		background: rgba(11, 12, 18, 0);
+		background: rgba(242, 239, 235, 0);
 		backdrop-filter: blur(0);
+		border-bottom: 1px solid transparent;
 		transition:
 			background 0.3s ease,
 			backdrop-filter 0.3s ease,
 			border-color 0.3s ease;
-		border-bottom: 1px solid transparent;
 	}
 
 	.site-nav.is-scrolled {
-		background: rgba(11, 12, 18, 0.72);
+		background: rgba(242, 239, 235, 0.82);
 		backdrop-filter: blur(14px);
 		border-bottom: 1px solid var(--border);
 	}
@@ -71,45 +78,48 @@ const links: NavLink[] = [
 	.brand {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.6rem;
-		font-weight: 700;
-		font-size: 1.05rem;
-		letter-spacing: -0.01em;
 	}
 
-	.brand-mark {
-		width: 1.4rem;
-		height: 1.4rem;
-		border-radius: 6px;
-		background: var(--accent-grad);
-		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+	.brand img {
+		height: 4rem;
+		width: auto;
+		border-radius: 0;
+		object-fit: contain;
+		background: transparent;
+		border: none;
+		transition: transform 0.25s ease;
 	}
 
-	.brand-accent {
-		color: var(--accent-2);
+	.brand:hover img {
+		transform: scale(1.05);
 	}
 
 	.nav-links {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 0.35rem;
 	}
 
 	.nav-link {
 		position: relative;
 		display: inline-flex;
 		padding: 0.5rem 0.85rem;
-		color: var(--muted);
-		font-size: 0.95rem;
-		font-weight: 500;
+		color: var(--text);
+		font-family: Sora, Inter, sans-serif;
+		font-size: 0.9rem;
+		font-weight: 600;
 		transition: color 0.25s ease;
+	}
+
+	.nav-link.is-active {
+		color: var(--accent);
 	}
 
 	.nav-link__underline {
 		position: absolute;
 		left: 0.85rem;
 		right: 0.85rem;
-		bottom: 0.25rem;
+		bottom: 0.3rem;
 		height: 2px;
 		border-radius: 2px;
 		background: var(--accent-grad);
@@ -117,13 +127,23 @@ const links: NavLink[] = [
 		transform-origin: left center;
 	}
 
+	.nav-link.is-active .nav-link__underline {
+		transform: scaleX(1);
+	}
+
+	.nav-cta {
+		margin-left: 0.5rem;
+		padding: 0.55rem 1.1rem;
+		font-size: 0.85rem;
+	}
+
 	.nav-toggle {
 		display: none;
 		flex-direction: column;
 		justify-content: center;
 		gap: 5px;
-		width: 40px;
-		height: 40px;
+		width: 42px;
+		height: 42px;
 		padding: 0;
 		background: transparent;
 		border: 1px solid var(--border);
@@ -139,7 +159,7 @@ const links: NavLink[] = [
 		border-radius: 2px;
 	}
 
-	@media (max-width: 860px) {
+	@media (max-width: 880px) {
 		.nav-toggle {
 			display: flex;
 		}
@@ -152,8 +172,8 @@ const links: NavLink[] = [
 			flex-direction: column;
 			align-items: stretch;
 			gap: 0;
-			padding: 0.5rem 1.5rem 1.25rem;
-			background: rgba(11, 12, 18, 0.96);
+			padding: 0.75rem 1.5rem 1.5rem;
+			background: rgba(242, 239, 235, 0.97);
 			backdrop-filter: blur(14px);
 			border-bottom: 1px solid var(--border);
 			opacity: 0;
@@ -167,12 +187,17 @@ const links: NavLink[] = [
 		}
 
 		.nav-link {
-			padding: 0.85rem 0.25rem;
+			padding: 0.9rem 0.25rem;
 			border-bottom: 1px solid var(--border);
 		}
 
 		.nav-link__underline {
 			display: none;
+		}
+
+		.nav-cta {
+			margin: 1rem 0 0;
+			align-self: flex-start;
 		}
 	}
 </style>
@@ -184,7 +209,7 @@ const links: NavLink[] = [
 	const nav = document.querySelector<HTMLElement>('[data-nav]');
 	const navLinks = gsap.utils.toArray<HTMLElement>('[data-nav-link]');
 	const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
-	const panel = document.querySelector<HTMLElement>('[data-nav-links]');
+	const lines = toggle ? Array.from(toggle.querySelectorAll('span')) : [];
 
 	if (nav) {
 		const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 8);
@@ -192,52 +217,38 @@ const links: NavLink[] = [
 		onScroll();
 	}
 
-	// Desktop link hover: animated underline + color shift.
 	navLinks.forEach((link) => {
 		const underline = link.querySelector<HTMLElement>('.nav-link__underline');
-
-		if (underline && !prefersReduced) {
+		const isActive = link.classList.contains('is-active');
+		if (underline && !prefersReduced && !isActive) {
 			const tl = gsap.timeline({ paused: true });
 			tl.to(underline, { scaleX: 1, duration: 0.35, ease: 'power3.out' }).to(
 				link,
-				{ color: '#00d4ff', duration: 0.35 },
+				{ color: '#FF7870', duration: 0.35 },
 				0,
 			);
 			link.addEventListener('mouseenter', () => tl.play());
 			link.addEventListener('mouseleave', () => tl.reverse());
-		} else if (underline) {
-			link.addEventListener('mouseenter', () => (underline.style.transform = 'scaleX(1)'));
-			link.addEventListener('mouseleave', () => (underline.style.transform = 'scaleX(0)'));
 		}
-
-		// Close the mobile menu on selection; smooth scroll is handled globally.
-		link.addEventListener('click', closeMenu);
 	});
 
-	// Mobile menu.
 	let menuOpen = false;
-	const lines = toggle ? Array.from(toggle.querySelectorAll('span')) : [];
-
 	function setMenu(open: boolean) {
 		menuOpen = open;
 		nav?.classList.toggle('is-open', open);
-		if (toggle) toggle.setAttribute('aria-expanded', String(open));
+		toggle?.setAttribute('aria-expanded', String(open));
 		if (toggle && !prefersReduced) {
 			gsap.to(lines[0], { y: open ? 7 : 0, rotation: open ? 45 : 0, duration: 0.3, ease: 'power2.inOut' });
 			gsap.to(lines[1], { opacity: open ? 0 : 1, duration: 0.2 });
 			gsap.to(lines[2], { y: open ? -7 : 0, rotation: open ? -45 : 0, duration: 0.3, ease: 'power2.inOut' });
 		}
 	}
-	function closeMenu() {
-		if (menuOpen) setMenu(false);
-	}
-
 	toggle?.addEventListener('click', () => setMenu(!menuOpen));
 	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape') closeMenu();
+		if (e.key === 'Escape' && menuOpen) setMenu(false);
 	});
+	navLinks.forEach((l) => l.addEventListener('click', () => menuOpen && setMenu(false)));
 
-	// Nav entrance.
 	if (nav && !prefersReduced) {
 		gsap.from(nav, { y: -40, opacity: 0, duration: 0.8, ease: 'power3.out', delay: 0.15 });
 	}

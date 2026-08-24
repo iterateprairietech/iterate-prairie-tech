@@ -4,12 +4,17 @@ import '../styles/global.css';
 interface Props {
 	title?: string;
 	description?: string;
+	activePath?: string;
 }
 
 const {
 	title = 'Iterate Prairie Tech',
-	description = 'Iterate Prairie Tech — building fast, considered web experiences.',
+	description = 'Local web development and IT support for small businesses around Breckenridge, MN.',
+	activePath = '/',
 } = Astro.props;
+
+const siteName = 'Iterate Prairie Tech';
+const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
 ---
 
 <!doctype html>
@@ -17,23 +22,27 @@ const {
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" href="/Iterate Prairie Tech - Favicon.png" />
+		<link rel="apple-touch-icon" href="/Iterate Prairie Tech - Favicon.png" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content={description} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
 			rel="stylesheet"
-			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
 		/>
-		<title>{title}</title>
+		<title>{fullTitle}</title>
 		<script is:inline>
-			// Mark JS as active before paint so [data-anim] elements can hide until animated.
 			document.documentElement.classList.add('js');
 		</script>
 	</head>
 	<body>
+		<div class="bg-layer" aria-hidden="true" data-bg-layer>
+			<img class="bg-loop bg-loop--outer" src="/Iterate Prairie Tech Loop No BG.png" alt="" />
+			<img class="bg-loop bg-loop--inner" src="/Iterate Prairie Tech Loop No BG.png" alt="" />
+			<span class="bg-grain"></span>
+		</div>
 		<slot />
 	</body>
 </html>
@@ -64,11 +73,68 @@ const {
 			lenis?.raf(time * 1000);
 		});
 		gsap.ticker.lagSmoothing(0);
+
+		// Subtle parallax on the global background layer as you scroll.
+		const bgLayer = document.querySelector<HTMLElement>('[data-bg-layer]');
+		const bgOuter = document.querySelector<HTMLElement>('.bg-loop--outer');
+		const bgInner = document.querySelector<HTMLElement>('.bg-loop--inner');
+
+		if (bgLayer) {
+			gsap.to(bgLayer, {
+				yPercent: 12,
+				ease: 'none',
+				scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1 },
+			});
+		}
+
+		// GSAP-driven rotation for smooth speed changes (no CSS keyframe jerk).
+		let outerTween: gsap.core.Tween | null = null;
+		let innerTween: gsap.core.Tween | null = null;
+
+		if (bgOuter && bgInner) {
+			gsap.set(bgOuter, { scaleX: -1 });
+			outerTween = gsap.to(bgOuter, {
+				rotation: 360,
+				duration: 50,
+				ease: 'none',
+				repeat: -1,
+			});
+			innerTween = gsap.to(bgInner, {
+				rotation: -360,
+				duration: 32,
+				ease: 'none',
+				repeat: -1,
+			});
+
+			const setSpeed = (fast: boolean) => {
+				if (outerTween) gsap.to(outerTween, { timeScale: fast ? 4 : 1, duration: 0.8, ease: 'power2.out' });
+				if (innerTween) gsap.to(innerTween, { timeScale: fast ? 5 : 1, duration: 0.8, ease: 'power2.out' });
+			};
+
+			// Speed up while scrolling, then ease back.
+			let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+			ScrollTrigger.create({
+				trigger: document.body,
+				start: 'top top',
+				end: 'bottom bottom',
+				onUpdate: () => {
+					setSpeed(true);
+					if (scrollTimer) clearTimeout(scrollTimer);
+					scrollTimer = setTimeout(() => setSpeed(false), 400);
+				},
+			});
+
+			// Speed up while the mouse is moving, then ease back after idle.
+			let moveTimer: ReturnType<typeof setTimeout> | null = null;
+			document.addEventListener('mousemove', () => {
+				setSpeed(true);
+				if (moveTimer) clearTimeout(moveTimer);
+				moveTimer = setTimeout(() => setSpeed(false), 600);
+			});
+		}
 	}
 
-	// Centralized anchor scrolling so components can request smooth scroll without
-	// reaching into Lenis directly. Falls back to native behavior when Lenis is off.
-	const NAV_OFFSET = 72; // matches --nav-h in px
+	const NAV_OFFSET = 76;
 	window.addEventListener('ipt:scrollto', ((e: Event) => {
 		const detail = (e as CustomEvent<string | HTMLElement>).detail;
 		const target =
@@ -84,8 +150,6 @@ const {
 		}
 	}) as EventListener);
 
-	// Global in-page anchor delegation: any <a href="#..."> scrolls smoothly via
-	// Lenis, with a native fallback. Lets components use plain anchors.
 	document.addEventListener('click', ((e: MouseEvent) => {
 		const a = (e.target as Element | null)?.closest?.('a[href^="#"]');
 		if (!(a instanceof HTMLAnchorElement)) return;
@@ -98,6 +162,5 @@ const {
 		history.replaceState(null, '', href);
 	}) as EventListener);
 
-	// Recompute triggers once everything (fonts/images) settles.
 	window.addEventListener('load', () => ScrollTrigger.refresh());
 </script>
