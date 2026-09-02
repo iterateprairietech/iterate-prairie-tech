@@ -1,12 +1,8 @@
 ---
-const headline = ['Local', 'web', '&', 'tech', 'help,', 'done', 'right.'];
+const headline = ['Built', 'for', "what's", 'now.', 'Ready', 'for', "what's", 'next.'];
 ---
 
 <section id="home" class="hero" data-hero>
-	<div class="hero-bg" aria-hidden="true">
-		<span class="grid-overlay"></span>
-	</div>
-
 	<div class="container hero-content">
 		<p class="eyebrow" data-anim data-hero-eyebrow>Breckenridge, MN &middot; Web &amp; IT</p>
 
@@ -45,24 +41,6 @@ const headline = ['Local', 'web', '&', 'tech', 'help,', 'done', 'right.'];
 		align-items: center;
 		padding-top: calc(var(--nav-h) + 2rem);
 		overflow: hidden;
-	}
-
-	.hero-bg {
-		position: absolute;
-		inset: 0;
-		z-index: 0;
-		pointer-events: none;
-	}
-
-	.grid-overlay {
-		position: absolute;
-		inset: 0;
-		background-image:
-			linear-gradient(rgba(44, 44, 42, 0.04) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(44, 44, 42, 0.04) 1px, transparent 1px);
-		background-size: 64px 64px;
-		-webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000, transparent 75%);
-		mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000, transparent 75%);
 	}
 
 	.hero-content {
@@ -165,11 +143,6 @@ const headline = ['Local', 'web', '&', 'tech', 'help,', 'done', 'right.'];
 			)
 			.fromTo('[data-scrollcue]', {}, { opacity: 1, duration: 0.5 }, '-=0.2');
 
-		gsap.to('.hero-bg', {
-			yPercent: 18,
-			ease: 'none',
-			scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-		});
 		gsap.to('.hero-content', {
 			y: -50,
 			opacity: 0.3,

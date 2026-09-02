@@ -4,23 +4,6 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Hero from '../components/Hero.astro';
 import CTA from '../components/CTA.astro';
-import LoopMark from '../components/LoopMark.astro';
-import PhotoPlaceholder from '../components/PhotoPlaceholder.astro';
-
-const services = [
-	{
-		href: '/services/web-development',
-		title: 'Web Development',
-		desc: 'Fast, modern Astro sites with motion baked in. Hosted free on GitHub Pages, DNS through Cloudflare.',
-		price: 'from $650',
-	},
-	{
-		href: '/services/it-tech-support',
-		title: 'IT & Tech Support',
-		desc: 'Device, network, and software troubleshooting for small businesses. On-site or remote.',
-		price: 'from $50/hr',
-	},
-];
 ---
 
 <Layout activePath="/">
@@ -28,58 +11,55 @@ const services = [
 	<main>
 		<Hero />
 
-		<!-- Services preview -->
-		<section id="services-preview" class="section" data-services-preview>
-			<div class="container">
-				<div class="preview-head" data-anim>
+		<section id="services-preview" class="section split" data-services-preview data-particle-capability>
+			<div class="container split-grid split-grid--text-right">
+				<div class="split-open" aria-hidden="true"></div>
+				<div class="split-text" data-anim>
 					<p class="kicker">What we do</p>
 					<h2 class="section-title">Two ways we help.</h2>
 					<p class="lead">
 						Websites that load fast and don't break, and tech support that actually shows up.
-						Pick a lane, or use both.
+						Fast, modern Astro sites hosted free on GitHub Pages, DNS through Cloudflare —
+						plus device, network, and software troubleshooting for small businesses, on-site
+						or remote. Pick a lane, or use both.
 					</p>
-				</div>
-
-				<div class="grid">
-					{
-						services.map((s) => (
-							<a class="service-card" href={s.href} data-anim data-card>
-								<div class="service-card__top">
-									<h3>{s.title}</h3>
-									<span class="price">{s.price}</span>
-								</div>
-								<p>{s.desc}</p>
-								<span class="service-card__link">Learn more <span aria-hidden="true">&rarr;</span></span>
-							</a>
-						))
-					}
+					<a class="btn btn-ghost" href="/services" data-cta>See services</a>
 				</div>
 			</div>
 		</section>
 
-		<!-- About teaser -->
-		<section class="section about-teaser" data-about-teaser>
-			<div class="container two-col">
-				<div class="two-col__text" data-anim>
-					<p class="kicker">Who we are</p>
+		<section class="section split" data-about-teaser data-particle-proof>
+			<div class="container split-grid split-grid--text-left">
+				<div class="split-text" data-anim>
+					<p class="kicker">How we build</p>
+					<h2 class="section-title">Websites that load fast and last.</h2>
+					<p class="lead">
+						Modern sites built with Astro and GSAP, hosted free on GitHub Pages, with DNS
+						managed through Cloudflare. No bloated CMS, no surprise hosting bills, no
+						thousand-dollar theme you can't edit. You own the code and the accounts.
+					</p>
+					<a class="btn btn-ghost" href="/services/web-development" data-cta>View web development</a>
+				</div>
+				<div class="split-open" aria-hidden="true"></div>
+			</div>
+		</section>
+
+		<section class="section split" data-loop-divider data-particle-reliability>
+			<div class="container split-grid split-grid--text-right">
+				<div class="split-open" aria-hidden="true"></div>
+				<div class="split-text" data-anim>
+					<p class="kicker">How we work</p>
 					<h2 class="section-title">A solo shop that doesn't ship and forget.</h2>
 					<p class="lead">
-						Iterate Prairie Tech is a one-person, small-town web and IT operation built around a
-						simple loop: test, analyze, adjust, repeat. Every project gets built, watched, and
-						tuned based on what's actually happening — not handed off and abandoned.
+						Most web and tech help follows the same pattern: someone shows up, does the thing,
+						gets paid, and leaves. Iterate Prairie Tech is built differently — test, analyze,
+						adjust, repeat. Every project gets built, watched, and tuned based on what's
+						actually happening, not handed off and abandoned.
 					</p>
 					<a class="btn btn-ghost" href="/about" data-cta>More about the approach</a>
 				</div>
-				<div class="two-col__media" data-anim>
-					<PhotoPlaceholder label="Photo placeholder" ratio="4 / 3" />
-				</div>
 			</div>
 		</section>
-
-		<!-- Loop divider -->
-		<div class="loop-divider" data-anim data-loop-divider>
-			<LoopMark size={144} />
-		</div>
 
 		<CTA />
 	</main>
@@ -87,91 +67,62 @@ const services = [
 </Layout>
 
 <style>
-	.preview-head {
-		max-width: 46rem;
-		margin-bottom: 3rem;
-	}
-
-	.grid {
+	.split-grid {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 1.25rem;
-	}
-
-	.service-card {
-		display: flex;
-		flex-direction: column;
-		padding: 2rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		color: var(--text);
-		will-change: transform;
-	}
-
-	.service-card__top {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.service-card h3 {
-		font-size: 1.25rem;
-		text-transform: uppercase;
-	}
-
-	.price {
-		font-family: Sora, Inter, sans-serif;
-		font-weight: 700;
-		font-size: 0.9rem;
-		color: var(--accent);
-		white-space: nowrap;
-	}
-
-	.service-card p {
-		color: var(--muted);
-		flex: 1;
-		margin-bottom: 1.25rem;
-	}
-
-	.service-card__link {
-		font-family: Sora, Inter, sans-serif;
-		font-weight: 600;
-		font-size: 0.9rem;
-		color: var(--sky);
-	}
-
-	.about-teaser {
-		background: var(--bg-2);
-	}
-
-	.two-col {
-		display: grid;
-		grid-template-columns: 1.1fr 0.9fr;
+		grid-template-columns: 1fr 1fr;
 		gap: 3rem;
 		align-items: center;
+		min-height: min(72vh, 40rem);
 	}
 
-	.two-col__text .lead {
+	/* Push text away from the center line toward the outer edge,
+	   and cap its width so the open half stays clearly open. */
+	.split-text {
+		max-width: 34rem;
+	}
+
+	.split-grid--text-right .split-text {
+		grid-column: 2;
+		grid-row: 1;
+		padding-left: clamp(2rem, 6vw, 5rem);
+	}
+
+	.split-grid--text-left .split-text {
+		grid-column: 1;
+		grid-row: 1;
+		padding-right: clamp(2rem, 6vw, 5rem);
+	}
+
+	.split-grid--text-right .split-open {
+		grid-column: 1;
+		grid-row: 1;
+	}
+
+	.split-open {
+		pointer-events: none;
+	}
+
+	.split-text .lead {
 		margin-bottom: 1.75rem;
 	}
 
-	.loop-divider {
-		display: flex;
-		justify-content: center;
-		padding: 2rem 0;
-	}
-
 	@media (max-width: 820px) {
-		.grid {
+		.split-grid {
 			grid-template-columns: 1fr;
+			min-height: 0;
+			gap: 0;
 		}
 
-		.two-col {
-			grid-template-columns: 1fr;
-			gap: 2rem;
+		.split-text {
+			max-width: none;
+			padding-inline: 0;
+			order: -1;
+		}
+
+		/* Reserve clear space below the text so the centered
+		   particle formation gets its own room on small screens. */
+		.split-open {
+			min-height: 85vw;
 		}
 	}
 </style>
@@ -187,34 +138,19 @@ const services = [
 	if (prefersReduced) {
 		gsap.set('[data-anim]', { opacity: 1, clearProps: 'transform' });
 	} else {
-		gsap.fromTo('[data-services-preview] .preview-head', { y: 20 }, { opacity: 1, y: 0, duration: 0.6, scrollTrigger: { trigger: '[data-services-preview]', start: 'top 80%' } });
-
-		const cards = gsap.utils.toArray<HTMLElement>('[data-services-preview] [data-card]');
-		gsap.fromTo(
-			cards,
-			{ y: 32 },
-			{ opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', scrollTrigger: { trigger: '[data-services-preview] .grid', start: 'top 82%' } },
-		);
-
-		cards.forEach((card) => {
-			const hov = gsap.timeline({ paused: true });
-			hov.to(card, { y: -6, duration: 0.3, ease: 'power2.out' });
-			card.addEventListener('mouseenter', () => {
-				card.style.borderColor = 'rgba(255, 120, 112, 0.5)';
-				hov.play();
-			});
-			card.addEventListener('mouseleave', () => {
-				card.style.borderColor = '';
-				hov.reverse();
-			});
+		gsap.utils.toArray<HTMLElement>('.split-text[data-anim]').forEach((el) => {
+			gsap.fromTo(
+				el,
+				{ y: 24 },
+				{
+					opacity: 1,
+					y: 0,
+					duration: 0.6,
+					ease: 'power3.out',
+					scrollTrigger: { trigger: el, start: 'top 80%' },
+				},
+			);
 		});
-
-		const teaser = gsap.utils.toArray<HTMLElement>('[data-about-teaser] [data-anim]');
-		gsap.fromTo(
-			teaser,
-			{ y: 24 },
-			{ opacity: 1, y: 0, duration: 0.6, stagger: 0.12, ease: 'power3.out', scrollTrigger: { trigger: '[data-about-teaser]', start: 'top 80%' } },
-		);
 
 		gsap.utils.toArray<HTMLElement>('[data-cta]').forEach((btn) => {
 			const hov = gsap.timeline({ paused: true });

@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import ParticleBackground from '../components/ParticleBackground.astro';
 
 interface Props {
 	title?: string;
@@ -39,8 +40,7 @@ const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
 	</head>
 	<body>
 		<div class="bg-layer" aria-hidden="true" data-bg-layer>
-			<img class="bg-loop bg-loop--outer" src="/Iterate Prairie Tech Loop No BG.png" alt="" />
-			<img class="bg-loop bg-loop--inner" src="/Iterate Prairie Tech Loop No BG.png" alt="" />
+			<ParticleBackground />
 			<span class="bg-grain"></span>
 		</div>
 		<slot />
@@ -76,60 +76,12 @@ const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
 
 		// Subtle parallax on the global background layer as you scroll.
 		const bgLayer = document.querySelector<HTMLElement>('[data-bg-layer]');
-		const bgOuter = document.querySelector<HTMLElement>('.bg-loop--outer');
-		const bgInner = document.querySelector<HTMLElement>('.bg-loop--inner');
 
 		if (bgLayer) {
 			gsap.to(bgLayer, {
 				yPercent: 12,
 				ease: 'none',
 				scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1 },
-			});
-		}
-
-		// GSAP-driven rotation for smooth speed changes (no CSS keyframe jerk).
-		let outerTween: gsap.core.Tween | null = null;
-		let innerTween: gsap.core.Tween | null = null;
-
-		if (bgOuter && bgInner) {
-			gsap.set(bgOuter, { scaleX: -1 });
-			outerTween = gsap.to(bgOuter, {
-				rotation: 360,
-				duration: 50,
-				ease: 'none',
-				repeat: -1,
-			});
-			innerTween = gsap.to(bgInner, {
-				rotation: -360,
-				duration: 32,
-				ease: 'none',
-				repeat: -1,
-			});
-
-			const setSpeed = (fast: boolean) => {
-				if (outerTween) gsap.to(outerTween, { timeScale: fast ? 4 : 1, duration: 0.8, ease: 'power2.out' });
-				if (innerTween) gsap.to(innerTween, { timeScale: fast ? 5 : 1, duration: 0.8, ease: 'power2.out' });
-			};
-
-			// Speed up while scrolling, then ease back.
-			let scrollTimer: ReturnType<typeof setTimeout> | null = null;
-			ScrollTrigger.create({
-				trigger: document.body,
-				start: 'top top',
-				end: 'bottom bottom',
-				onUpdate: () => {
-					setSpeed(true);
-					if (scrollTimer) clearTimeout(scrollTimer);
-					scrollTimer = setTimeout(() => setSpeed(false), 400);
-				},
-			});
-
-			// Speed up while the mouse is moving, then ease back after idle.
-			let moveTimer: ReturnType<typeof setTimeout> | null = null;
-			document.addEventListener('mousemove', () => {
-				setSpeed(true);
-				if (moveTimer) clearTimeout(moveTimer);
-				moveTimer = setTimeout(() => setSpeed(false), 600);
 			});
 		}
 	}

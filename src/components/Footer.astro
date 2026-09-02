@@ -10,11 +10,6 @@ const year = new Date().getFullYear();
 				<img src="/Iterate_Prairie_Tech.png" alt="Iterate Prairie Tech" width="56" height="56" />
 			</a>
 
-			<div class="foot-tagline" data-anim data-foot-tag>
-				<LoopMark size={88} />
-				<p class="tagline">Test. Analyze. Adjust. Repeat.</p>
-			</div>
-
 			<nav class="foot-nav" aria-label="Footer">
 				<a href="/">Home</a>
 				<a href="/about">About</a>
@@ -23,8 +18,12 @@ const year = new Date().getFullYear();
 			</nav>
 		</div>
 
+		<div class="foot-tagline" data-foot-tag>
+			<LoopMark size={88} />
+			<p class="tagline">Built for what's now. Ready for what's next.</p>
+		</div>
+
 		<div class="foot-contact">
-			<a href="tel:7014035657">701-403-5657</a>
 			<a href="mailto:contact@iterateprairietech.com">contact@iterateprairietech.com</a>
 			<span>Breckenridge, MN and the surrounding area</span>
 		</div>
@@ -45,9 +44,9 @@ const year = new Date().getFullYear();
 	}
 
 	.foot-top {
-		display: grid;
-		grid-template-columns: 1fr auto 1fr;
+		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 2rem;
 		padding-bottom: 2.5rem;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -75,24 +74,24 @@ const year = new Date().getFullYear();
 	.foot-tagline {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.75rem;
-		justify-self: center;
+		width: 100%;
+		padding: 2rem 0 0.5rem;
+		text-align: center;
 	}
 
 	.tagline {
 		font-family: Sora, Inter, sans-serif;
 		font-weight: 700;
-		font-size: 1.05rem;
-		letter-spacing: 0.02em;
-		text-transform: uppercase;
+		font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+		letter-spacing: 0.01em;
 		color: #fff;
-		white-space: nowrap;
 	}
 
 	.foot-nav {
 		display: flex;
 		gap: 1.25rem;
-		justify-self: end;
 	}
 
 	.foot-nav a {
@@ -142,20 +141,18 @@ const year = new Date().getFullYear();
 
 	@media (max-width: 760px) {
 		.foot-top {
-			grid-template-columns: 1fr;
+			flex-direction: column;
 			text-align: center;
 			gap: 1.75rem;
-		}
-
-		.foot-brand,
-		.foot-tagline,
-		.foot-nav {
-			justify-self: center;
 		}
 
 		.foot-nav {
 			flex-wrap: wrap;
 			justify-content: center;
+		}
+
+		.foot-tagline {
+			flex-direction: column;
 		}
 
 		.foot-contact {

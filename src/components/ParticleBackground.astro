@@ -1,0 +1,508 @@
+---
+---
+
+<canvas class="particle-canvas" data-particle-canvas></canvas>
+
+<style>
+	.particle-canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		display: block;
+		opacity: 0.35;
+	}
+</style>
+
+<script>
+	// Particle background: renders the loop PNG as interactive particles.
+	// Motion layers: idle wander, mouse repulsion, scroll-driven spread + rotation.
+	// Vanilla Canvas 2D + requestAnimationFrame.
+
+	const cv = document.querySelector<HTMLCanvasElement>('[data-particle-canvas]');
+	if (!cv) throw new Error('particle canvas not found');
+
+	const ctx = cv.getContext('2d')!;
+	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	interface Particle {
+		x: number; y: number;
+		vx: number; vy: number;
+		tx: number; ty: number;
+		phase: number;
+		c: string;
+		s: number;
+	}
+
+	let particles: Particle[] = [];
+	let W = 0, H = 0, cx = 0, cy = 0;
+	let formCx = 0, formCy = 0;
+	let spinEnabled = true;
+	let dpr = Math.min(2, window.devicePixelRatio || 1);
+	let running = false;
+	let raf = 0;
+	let imgLoaded = false;
+	let img: HTMLImageElement | null = null;
+	let webIcon: HTMLImageElement | null = null;
+	let itIcon: HTMLImageElement | null = null;
+	let relIcon: HTMLImageElement | null = null;
+	let currentBeat = 'logo';
+	let capTimer: ReturnType<typeof setInterval> | null = null;
+	let proofTimer: ReturnType<typeof setTimeout> | null = null;
+	let capIndex = 0;
+
+	// Motion state — lerped each frame for smooth ramping
+	let rotation = 0;
+	let rotSpeed = -0.002;
+	let rotSpeedTarget = -0.002;
+	let wander = 4;
+	let wanderTarget = 4;
+	let spread = 0;            // 0 = tight formation, 1 = fully dispersed
+	let time = 0;
+
+	const mouse = { x: -9999, y: -9999 };
+
+	const BASE_ROT = -0.002;   // negative = counter-clockwise
+	const FAST_ROT = -0.006;   // peak interaction speed (slightly slower than before)
+	const BASE_WANDER = 4;
+	const FAST_WANDER = 10;
+	const RAMP = 0.04;         // slower lerp = smoother ramp between states
+	const MAX_SPREAD_DIST = 0.5; // max radial push as fraction of viewport min-dimension
+
+	type SampleSource = HTMLImageElement | HTMLCanvasElement;
+	type SampleMode = 'shape' | 'photo';
+	type SampleAlign = 'center' | 'left' | 'right';
+
+	function pickColor(): string {
+		const r = Math.random();
+		if (r < 0.04) return '#38B6FF';
+		if (r < 0.16) return '#FF7870';
+		return '#2C2C2A';
+	}
+
+	function sourceSize(source: SampleSource): { sw: number; sh: number } {
+		if (source instanceof HTMLCanvasElement) {
+			return { sw: source.width, sh: source.height };
+		}
+		return { sw: source.naturalWidth, sh: source.naturalHeight };
+	}
+
+	function sampleImage(
+		source: SampleSource | null = img,
+		mode: SampleMode = 'shape',
+		morph = true,
+		align: SampleAlign = 'center',
+	) {
+		if (!source || !W || !H) return;
+		if (source === img && !imgLoaded) return;
+
+		const { sw, sh } = sourceSize(source);
+		if (!sw || !sh) return;
+
+		// Match the CSS breakpoint exactly (canvas width excludes the desktop
+		// scrollbar, so comparing W directly can disagree with the media query).
+		const narrow = window.matchMedia('(max-width: 820px)').matches;
+		const alignEff: SampleAlign = narrow ? 'center' : align;
+		const imgSize =
+			alignEff === 'center'
+				? Math.round(Math.min(W, H) * 1.0)
+				: Math.round(Math.min(W * 0.48, H) * 0.78);
+		const srcAspect = sw / sh;
+
+		// Aspect-preserving contain into a square canvas; letterbox the unused axis.
+		let dw: number, dh: number, dx: number, dy: number;
+		if (srcAspect > 1) {
+			dw = imgSize;
+			dh = Math.round(imgSize / srcAspect);
+			dx = 0;
+			dy = Math.round((imgSize - dh) / 2);
+		} else {
+			dh = imgSize;
+			dw = Math.round(imgSize * srcAspect);
+			dy = 0;
+			dx = Math.round((imgSize - dw) / 2);
+		}
+
+		const off = document.createElement('canvas');
+		off.width = imgSize;
+		off.height = imgSize;
+		const octx = off.getContext('2d')!;
+		octx.clearRect(0, 0, imgSize, imgSize);
+		octx.drawImage(source, 0, 0, sw, sh, dx, dy, dw, dh);
+		const data = octx.getImageData(0, 0, imgSize, imgSize).data;
+
+		const mob = W < 768;
+		const gap = mob ? 7 : 5;
+
+		let ox: number;
+		if (alignEff === 'left') ox = (W * 0.5 - imgSize) / 2;
+		else if (alignEff === 'right') ox = W * 0.5 + (W * 0.5 - imgSize) / 2;
+		else ox = (W - imgSize) / 2;
+		const oy = (H - imgSize) / 2;
+		formCx = ox + imgSize / 2;
+		formCy = oy + imgSize / 2;
+
+		const next: Particle[] = [];
+		for (let py = dy; py < dy + dh; py += gap) {
+			for (let px = dx; px < dx + dw; px += gap) {
+				const i = (py * imgSize + px) * 4;
+				const a = data[i + 3];
+				let c: string | null = null;
+				if (mode === 'shape') {
+					if (a > 128) c = pickColor();
+				} else if (a > 0) {
+					c = `rgb(${data[i]}, ${data[i + 1]}, ${data[i + 2]})`;
+				}
+				if (c === null) continue;
+				next.push({
+					x: Math.random() * W,
+					y: Math.random() * H,
+					vx: 0, vy: 0,
+					tx: ox + px, ty: oy + py,
+					phase: Math.random() * Math.PI * 2,
+					c,
+					s: mob ? Math.random() * 2.0 + 2.5 : Math.random() * 1.8 + 2.2,
+				});
+			}
+		}
+
+		if (next.length > 2600) {
+			const skip = Math.ceil(next.length / 2600);
+			const kept = next.filter((_, i) => i % skip === 0);
+			next.length = 0;
+			next.push(...kept);
+		}
+
+		if (!morph || particles.length === 0) {
+			particles = next;
+			return;
+		}
+
+		for (let i = 0; i < next.length; i++) {
+			if (i < particles.length) {
+				particles[i].tx = next[i].tx;
+				particles[i].ty = next[i].ty;
+				particles[i].c = next[i].c;
+				particles[i].s = next[i].s;
+			} else {
+				const donor = particles[i % particles.length];
+				particles.push({
+					...next[i],
+					x: donor.x,
+					y: donor.y,
+					vx: donor.vx,
+					vy: donor.vy,
+				});
+			}
+		}
+		particles.length = next.length;
+	}
+
+	function resize() {
+		const rect = cv.getBoundingClientRect();
+		W = Math.round(rect.width);
+		H = Math.round(rect.height);
+		if (W === 0 || H === 0) return;
+		cx = W / 2;
+		cy = H / 2;
+		cv.width = Math.round(W * dpr);
+		cv.height = Math.round(H * dpr);
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		if (imgLoaded) applyBeat(currentBeat, true);
+	}
+
+	function frame() {
+		if (!running) return;
+		time += 0.016;
+
+		// Smooth ramp for rotation and wander
+		wander += (wanderTarget - wander) * RAMP;
+		if (spinEnabled) {
+			rotSpeed += (rotSpeedTarget - rotSpeed) * RAMP;
+			rotation += rotSpeed;
+		} else {
+			rotSpeed += (0 - rotSpeed) * RAMP;
+			rotation += (0 - rotation) * RAMP;
+		}
+
+		const beat = detectBeat();
+		if (beat !== currentBeat) applyBeat(beat, true);
+
+		// Scroll-position-driven spread: 0% at top, 100% at 33% page scroll.
+		// Only while the logo beat is active; later beats stay formed.
+		const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+		const scrollFraction = window.scrollY / scrollable;
+		const spreadTarget = currentBeat === 'logo' ? Math.min(1, scrollFraction / 0.33) : 0;
+		spread += (spreadTarget - spread) * RAMP;
+
+		const maxSpreadPx = Math.min(W, H) * MAX_SPREAD_DIST;
+
+		ctx.clearRect(0, 0, W, H);
+
+		const cosR = Math.cos(rotation);
+		const sinR = Math.sin(rotation);
+
+		for (let i = 0; i < particles.length; i++) {
+			const p = particles[i];
+
+			// Rotate in place around the formation origin (not the viewport center)
+			const dx = p.tx - formCx;
+			const dy = p.ty - formCy;
+			const rx = dx * cosR - dy * sinR + formCx;
+			const ry = dx * sinR + dy * cosR + formCy;
+
+			// Scroll spread: push outward from the formation origin
+			const sx = rx + (rx - formCx) * spread * maxSpreadPx / Math.max(1, Math.min(W, H) * 0.4);
+			const sy = ry + (ry - formCy) * spread * maxSpreadPx / Math.max(1, Math.min(W, H) * 0.4);
+
+			// Idle wander
+			const wx = sx + Math.sin(time * 0.8 + p.phase) * wander;
+			const wy = sy + Math.cos(time * 0.6 + p.phase * 1.3) * wander;
+
+			// Spring force
+			let ax = (wx - p.x) * 0.02;
+			let ay = (wy - p.y) * 0.02;
+
+			// Mouse repulsion
+			const mdx = p.x - mouse.x;
+			const mdy = p.y - mouse.y;
+			const md2 = mdx * mdx + mdy * mdy;
+			const R = 100;
+			if (md2 < R * R) {
+				const dd = Math.sqrt(md2) || 1;
+				const f = (R - dd) / R * 3.4;
+				ax += (mdx / dd) * f;
+				ay += (mdy / dd) * f;
+			}
+
+			p.vx = (p.vx + ax) * 0.86;
+			p.vy = (p.vy + ay) * 0.86;
+			p.x += p.vx;
+			p.y += p.vy;
+
+			ctx.fillStyle = p.c;
+			ctx.fillRect(p.x, p.y, p.s, p.s);
+		}
+
+		raf = requestAnimationFrame(frame);
+	}
+
+	function start() {
+		if (running) return;
+		running = true;
+		raf = requestAnimationFrame(frame);
+	}
+
+	function stop() {
+		running = false;
+		cancelAnimationFrame(raf);
+	}
+
+	function loadImage(src: string): Promise<HTMLImageElement> {
+		return new Promise((resolve, reject) => {
+			const im = new Image();
+			im.onload = () => resolve(im);
+			im.onerror = reject;
+			im.src = src;
+		});
+	}
+
+	function detectBeat(): string {
+		if (!document.querySelector('[data-particle-capability]')) return 'logo';
+		const line = window.innerHeight * 0.48;
+		const marks: [string, string][] = [
+			['capability', '[data-particle-capability]'],
+			['proof', '[data-particle-proof]'],
+			['reliability', '[data-particle-reliability]'],
+			['footer', '[data-footer]'],
+		];
+		let beat = 'logo';
+		for (const [id, sel] of marks) {
+			const el = document.querySelector(sel);
+			if (el && el.getBoundingClientRect().top < line) beat = id;
+		}
+		return beat;
+	}
+
+	function clearBeatTimers() {
+		if (capTimer) {
+			clearInterval(capTimer);
+			capTimer = null;
+		}
+		if (proofTimer) {
+			clearTimeout(proofTimer);
+			proofTimer = null;
+		}
+	}
+
+	function setSpin(on: boolean) {
+		spinEnabled = on;
+		rotSpeedTarget = on ? BASE_ROT : 0;
+	}
+
+	function startCapCycle(morph: boolean, align: SampleAlign) {
+		const icons = [webIcon, itIcon].filter((x): x is HTMLImageElement => x !== null);
+		if (icons.length === 0) {
+			sampleImage(img, 'shape', morph, align);
+			setSpin(false);
+			return;
+		}
+		capIndex = 0;
+		sampleImage(icons[0], 'shape', morph, align);
+		setSpin(true);
+		if (icons.length < 2) return;
+		capTimer = setInterval(() => {
+			if (currentBeat !== 'capability') return;
+			capIndex = (capIndex + 1) % icons.length;
+			sampleImage(icons[capIndex], 'shape', true, align);
+			setSpin(capIndex === 0);
+		}, 2800);
+	}
+
+	// PLACEHOLDER: once a real project screenshot exists, this beat should
+	// sample that photo with sampleImage(screenshot, 'photo', true) instead
+	// of these wireframe canvases. Photo mode will read stronger.
+	function drawLayout(finished: boolean): HTMLCanvasElement {
+		const c = document.createElement('canvas');
+		c.width = 800;
+		c.height = 560;
+		const g = c.getContext('2d')!;
+		g.strokeStyle = '#2C2C2A';
+		g.fillStyle = '#2C2C2A';
+		g.lineWidth = finished ? 10 : 5;
+		if (finished) {
+			g.fillRect(80, 48, 640, 56);
+			g.fillRect(80, 140, 300, 180);
+			g.fillRect(420, 140, 300, 80);
+			g.fillRect(420, 240, 300, 80);
+			g.fillRect(80, 360, 640, 120);
+		} else {
+			g.strokeRect(80, 48, 640, 56);
+			g.strokeRect(80, 140, 280, 160);
+			g.strokeRect(400, 140, 320, 80);
+		}
+		return c;
+	}
+
+	function startProof(morph: boolean, align: SampleAlign) {
+		sampleImage(drawLayout(false), 'shape', morph, align);
+		proofTimer = setTimeout(() => {
+			if (currentBeat !== 'proof') return;
+			sampleImage(drawLayout(true), 'shape', true, align);
+		}, 1800);
+	}
+
+	function drawTagline(): HTMLCanvasElement {
+		const c = document.createElement('canvas');
+		c.width = 1400;
+		c.height = 420;
+		const g = c.getContext('2d')!;
+		g.fillStyle = '#2C2C2A';
+		g.textAlign = 'center';
+		g.textBaseline = 'middle';
+		g.font = '800 64px Sora, Inter, sans-serif';
+		g.fillText("Built for what's now.", 700, 160);
+		g.fillText("Ready for what's next.", 700, 260);
+		return c;
+	}
+
+	function beatAlign(beat: string): SampleAlign {
+		if (beat === 'capability' || beat === 'reliability') return 'left';
+		if (beat === 'proof') return 'right';
+		return 'center';
+	}
+
+	function applyBeat(beat: string, morph: boolean) {
+		currentBeat = beat;
+		clearBeatTimers();
+		const align = beatAlign(beat);
+		if (beat === 'logo') setSpin(true);
+		else if (beat !== 'capability') setSpin(false);
+		if (beat === 'capability') startCapCycle(morph, align);
+		else if (beat === 'proof') startProof(morph, align);
+		else if (beat === 'reliability') sampleImage(relIcon ?? img, 'shape', morph, align);
+		else if (beat === 'footer') {
+			const paint = () => {
+				if (currentBeat === 'footer') sampleImage(drawTagline(), 'shape', morph, align);
+			};
+			if (document.fonts?.status === 'loaded') paint();
+			else void document.fonts?.ready.then(paint);
+			paint();
+		}
+		else sampleImage(img, 'shape', morph, align);
+	}
+
+	// --- Interaction ---
+
+	let moveTimer: ReturnType<typeof setTimeout> | null = null;
+
+	document.addEventListener('pointermove', (e) => {
+		mouse.x = e.clientX;
+		mouse.y = e.clientY;
+		if (spinEnabled) rotSpeedTarget = FAST_ROT;
+		wanderTarget = FAST_WANDER;
+		if (moveTimer) clearTimeout(moveTimer);
+		moveTimer = setTimeout(() => {
+			rotSpeedTarget = spinEnabled ? BASE_ROT : 0;
+			wanderTarget = BASE_WANDER;
+		}, 600);
+	});
+	document.addEventListener('pointerleave', () => {
+		mouse.x = -9999;
+		mouse.y = -9999;
+	});
+	document.addEventListener('touchend', () => {
+		mouse.x = -9999;
+		mouse.y = -9999;
+	});
+
+	// --- Init ---
+
+	function init() {
+		if (imgLoaded) return;
+		imgLoaded = true;
+		resize();
+		start();
+	}
+
+	if (prefersReduced) {
+		cv.style.display = 'none';
+		const imgEl = document.createElement('img');
+		imgEl.src = '/Iterate Prairie Tech Loop No BG.png';
+		imgEl.alt = '';
+		imgEl.style.cssText = 'position:absolute;inset:0;margin:auto;width:min(60vmin,80vw);height:auto;opacity:0.1;';
+		cv.parentElement?.insertBefore(imgEl, cv);
+	} else {
+		img = new Image();
+		img.onload = init;
+		img.src = '/Iterate Prairie Tech Loop No BG.png';
+		if (img.complete && img.naturalWidth > 0) init();
+
+		void Promise.all([
+			loadImage('/IPT - Services - Web Design.svg'),
+			loadImage('/IPT - Services - IT & Tech Support.svg'),
+			loadImage('/IPT - Reliability.svg'),
+		]).then(([web, it, rel]) => {
+			webIcon = web;
+			itIcon = it;
+			relIcon = rel;
+		}).catch(() => {
+			/* beat swaps fall back to the loop logo if an icon fails to load */
+		});
+
+		img.onerror = () => {
+			cv.style.display = 'none';
+			console.error('ParticleBackground: failed to load loop PNG');
+		};
+
+		document.addEventListener('visibilitychange', () => {
+			if (document.hidden) stop(); else if (imgLoaded) start();
+		});
+
+		let resizeTimer: ReturnType<typeof setTimeout>;
+		window.addEventListener('resize', () => {
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(resize, 150);
+		});
+	}
+</script>

@@ -56,25 +56,6 @@ body {
   place-items: center;
 }
 
-/* Two copies of the loop PNG rotating at different speeds via GSAP */
-.bg-loop {
-  position: absolute;
-  will-change: transform;
-  user-select: none;
-}
-
-.bg-loop--outer {
-  width: 110vmin;
-  height: 110vmin;
-  opacity: 0.07;
-}
-
-.bg-loop--inner {
-  width: 60vmin;
-  height: 60vmin;
-  opacity: 0.09;
-}
-
 /* Subtle grain texture */
 .bg-grain {
   position: absolute;
@@ -108,11 +89,7 @@ body > footer {
   z-index: 1;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bg-loop {
-    will-change: auto;
-  }
-}
+
 
 h1,
 h2,
