@@ -239,6 +239,14 @@
 
 		ctx.clearRect(0, 0, W, H);
 
+		// The bg-layer is parallaxed via GSAP (yPercent up to 12), which shifts
+		// the canvas visually without changing its drawing coordinates. Map the
+		// mouse from viewport coords into canvas coords so repulsion tracks
+		// the actual cursor position regardless of scroll.
+		const cvr = cv.getBoundingClientRect();
+		const mx = mouse.x - cvr.left;
+		const my = mouse.y - cvr.top;
+
 		const cosR = Math.cos(rotation);
 		const sinR = Math.sin(rotation);
 
@@ -264,8 +272,8 @@
 			let ay = (wy - p.y) * 0.02;
 
 			// Mouse repulsion
-			const mdx = p.x - mouse.x;
-			const mdy = p.y - mouse.y;
+			const mdx = p.x - mx;
+			const mdy = p.y - my;
 			const md2 = mdx * mdx + mdy * mdy;
 			const R = 100;
 			if (md2 < R * R) {

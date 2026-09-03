@@ -55,13 +55,13 @@ const scope = [
 				<div class="two-col__text" data-anim>
 					<h2 class="section-title">How it works.</h2>
 					<p>
-						Pay-as-you-go is the default. You call when something's wrong, we sort it out, and
+						Pay-as-you-go is the default. You call when something's wrong, I sort it out, and
 						you pay for the time it actually took. No retainer, no minimum commitment, no
 						sign-up form.
 					</p>
 					<p>
 						On-site visits come to you around Breckenridge and the surrounding area. Remote
-						support covers anything we can fix over a screen share and a phone call — usually
+						support covers anything I can fix over a screen share and a phone call — usually
 						faster to schedule, and it's a lower rate.
 					</p>
 					<p>
@@ -69,6 +69,11 @@ const scope = [
 						<strong>$90/month plan</strong> that covers routine support and priority
 						scheduling. It's there if you want it — but most people start pay-as-you-go and
 						stay there.
+					</p>
+					<p class="how-follow">
+						Every fix gets a follow-up a few days later to make sure it actually held. That's
+						part of why the client list stays capped, so follow-up stays realistic instead of
+						a nice sounding promise.
 					</p>
 				</div>
 				<div class="two-col__media" data-anim>
@@ -107,7 +112,7 @@ const scope = [
 			</div>
 		</section>
 
-		<CTA title="Something not working?" text="Call or email and we'll figure out whether it's an on-site visit or a quick remote fix." />
+		<CTA title="Something not working?" text="Call or email and I'll figure out whether it's an on-site visit or a quick remote fix." />
 	</main>
 	<Footer />
 </Layout>
@@ -138,6 +143,13 @@ const scope = [
 
 	.two-col__text strong {
 		color: var(--accent);
+	}
+
+	.how-follow {
+		padding: 1rem 1.25rem;
+		border-left: 3px solid var(--accent);
+		background: rgba(255, 120, 112, 0.06);
+		border-radius: 0 10px 10px 0;
 	}
 
 	.pricing-head {

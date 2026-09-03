@@ -18,6 +18,11 @@ const tiers = [
 		desc: 'Home, About, Services, Contact — the usual setup, with room to grow.',
 		featured: true,
 	},
+	{
+		name: 'Multi-brand hub',
+		price: '$400–$600 add-on',
+		desc: 'A shared site for two related businesses, like a co-op pairing or a family brand, each with its own section, without paying to build and host two sites from scratch.',
+	},
 ];
 
 const addons = [
@@ -66,6 +71,11 @@ const addons = [
 						You own the code and the accounts. Nothing is locked behind a proprietary builder
 						or a monthly platform fee.
 					</p>
+					<p class="stack-follow">
+						Every site launches with real analytics in place, and gets a scheduled review, 30
+						days out, then quarterly, with specific priced recommendations based on what's
+						actually happening.
+					</p>
 				</div>
 				<div class="two-col__media" data-anim>
 					<PhotoPlaceholder label="Photo placeholder — example site" ratio="4 / 3" />
@@ -107,7 +117,7 @@ const addons = [
 			<LoopMark size={144} />
 		</div>
 
-		<CTA title="Ready to start a site?" text="Tell us what you're building and we'll map out the pages and the price." />
+		<CTA title="Ready to start a site?" text="Tell me what you're building and I'll map out the pages and the price." />
 	</main>
 	<Footer />
 </Layout>
@@ -140,6 +150,13 @@ const addons = [
 		color: var(--accent);
 	}
 
+	.stack-follow {
+		padding: 1rem 1.25rem;
+		border-left: 3px solid var(--accent);
+		background: rgba(255, 120, 112, 0.06);
+		border-radius: 0 10px 10px 0;
+	}
+
 	.pricing-head {
 		max-width: 44rem;
 		margin-bottom: 2.5rem;
@@ -147,7 +164,7 @@ const addons = [
 
 	.tiers {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 1.25rem;
 		margin-bottom: 2.5rem;
 	}
