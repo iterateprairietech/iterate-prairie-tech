@@ -92,6 +92,29 @@ const particlePresets = [
 							<canvas class="demo-canvas" data-demo-particle></canvas>
 							<canvas class="demo-canvas demo-burst" data-demo-burst></canvas>
 						</div>
+						<div class="demo-options" data-demo-options>
+							<label class="opt">
+								<span class="opt__label">Density</span>
+								<input type="range" min="0.5" max="2" step="0.1" value="1" data-opt="density" />
+								<span class="opt__val" data-val="density">1.0x</span>
+							</label>
+							<label class="opt">
+								<span class="opt__label">Speed</span>
+								<input type="range" min="0" max="2.5" step="0.1" value="1" data-opt="speed" />
+								<span class="opt__val" data-val="speed">1.0x</span>
+							</label>
+							<label class="opt">
+								<span class="opt__label">Size</span>
+								<input type="range" min="0.5" max="2.5" step="0.1" value="1" data-opt="size" />
+								<span class="opt__val" data-val="size">1.0x</span>
+							</label>
+							<label class="opt">
+								<span class="opt__label">Cursor</span>
+								<input type="range" min="40" max="220" step="10" value="100" data-opt="repulsion" />
+								<span class="opt__val" data-val="repulsion">100px</span>
+							</label>
+							<button class="opt-reset" type="button" data-opt-reset>Reset</button>
+						</div>
 						<div class="demo-bar" data-demo-bar>
 							<div class="demo-gallery" role="group" aria-label="Shape presets">
 								{
@@ -270,6 +293,63 @@ const particlePresets = [
 		pointer-events: none;
 	}
 
+	.demo-options {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem 2rem;
+		margin-top: 1.25rem;
+	}
+
+	.opt {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.opt__label {
+		font-family: Sora, Inter, sans-serif;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.opt input[type='range'] {
+		width: 6.5rem;
+		accent-color: var(--accent);
+	}
+
+	.opt__val {
+		font-family: Sora, Inter, sans-serif;
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--muted);
+		min-width: 2.75rem;
+	}
+
+	.opt-reset {
+		margin: 0;
+		background: none;
+		border: none;
+		border-radius: 0;
+		padding: 0.35rem 0;
+		color: var(--muted);
+		font-family: Sora, Inter, sans-serif;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		cursor: pointer;
+		text-decoration: underline;
+		text-underline-offset: 4px;
+	}
+
+	.opt-reset:hover {
+		color: var(--text);
+	}
+
 	.demo-bar {
 		display: flex;
 		flex-wrap: wrap;
@@ -392,7 +472,7 @@ const particlePresets = [
 	import gsap from 'gsap';
 	import { ScrollTrigger } from 'gsap/ScrollTrigger';
 	import { createParticleEngine, loadImage } from '../lib/particleEngine';
-	import type { SampleMode, SampleSource } from '../lib/particleEngine';
+	import type { ParticleLiveOptions, SampleMode, SampleSource } from '../lib/particleEngine';
 
 	gsap.registerPlugin(ScrollTrigger);
 
@@ -516,6 +596,43 @@ const particlePresets = [
 			});
 			ro.observe(stage);
 		}
+
+		type LiveKey = 'density' | 'speed' | 'size' | 'repulsion';
+		const liveDefaults: Record<LiveKey, number> = { density: 1, speed: 1, size: 1, repulsion: 100 };
+		const liveInputs: Record<LiveKey, HTMLInputElement | null> = {
+			density: document.querySelector<HTMLInputElement>('[data-opt="density"]'),
+			speed: document.querySelector<HTMLInputElement>('[data-opt="speed"]'),
+			size: document.querySelector<HTMLInputElement>('[data-opt="size"]'),
+			repulsion: document.querySelector<HTMLInputElement>('[data-opt="repulsion"]'),
+		};
+
+		function fmtLive(k: LiveKey, v: number): string {
+			return k === 'repulsion' ? `${Math.round(v)}px` : `${v.toFixed(1)}x`;
+		}
+
+		function setLiveVal(k: LiveKey, v: number) {
+			const valEl = document.querySelector(`[data-val="${k}"]`);
+			if (valEl) valEl.textContent = fmtLive(k, v);
+			const patch: ParticleLiveOptions = {};
+			patch[k] = v;
+			engine.setLive(patch);
+		}
+
+		(Object.keys(liveInputs) as LiveKey[]).forEach((k) => {
+			liveInputs[k]?.addEventListener('input', () => {
+				const v = parseFloat(liveInputs[k]!.value);
+				if (Number.isNaN(v)) return;
+				setLiveVal(k, v);
+			});
+		});
+
+		document.querySelector<HTMLButtonElement>('[data-opt-reset]')?.addEventListener('click', () => {
+			(Object.keys(liveDefaults) as LiveKey[]).forEach((k) => {
+				const input = liveInputs[k];
+				if (input) input.value = String(liveDefaults[k]);
+				setLiveVal(k, liveDefaults[k]);
+			});
+		});
 
 		document.addEventListener('visibilitychange', () => {
 			if (document.hidden) engine.stop();

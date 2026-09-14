@@ -67,6 +67,81 @@ export function defaultPickColor(): string {
 	return CHARCOAL;
 }
 
+const KEY_TOLERANCE = 2000;
+
+function edgeKeyBackground(
+	data: Uint8ClampedArray,
+	imgSize: number,
+	dx: number,
+	dy: number,
+	dw: number,
+	dh: number,
+): Uint8Array {
+	const mask = new Uint8Array(imgSize * imgSize);
+	const corners: [number, number][] = [
+		[dx, dy],
+		[dx + dw - 1, dy],
+		[dx, dy + dh - 1],
+		[dx + dw - 1, dy + dh - 1],
+	];
+	let br = 0;
+	let bg = 0;
+	let bb = 0;
+	for (const [cx, cy] of corners) {
+		const i = (cy * imgSize + cx) * 4;
+		br += data[i];
+		bg += data[i + 1];
+		bb += data[i + 2];
+	}
+	br /= 4;
+	bg /= 4;
+	bb /= 4;
+
+	const match = (x: number, y: number): boolean => {
+		const i = (y * imgSize + x) * 4;
+		const dr = data[i] - br;
+		const dg = data[i + 1] - bg;
+		const db = data[i + 2] - bb;
+		return dr * dr + dg * dg + db * db <= KEY_TOLERANCE;
+	};
+
+	const queue: number[] = [];
+	const push = (x: number, y: number) => {
+		const m = y * imgSize + x;
+		if (!mask[m] && match(x, y)) {
+			mask[m] = 1;
+			queue.push(m);
+		}
+	};
+	for (let x = dx; x < dx + dw; x++) {
+		push(x, dy);
+		push(x, dy + dh - 1);
+	}
+	for (let y = dy; y < dy + dh; y++) {
+		push(dx, y);
+		push(dx + dw - 1, y);
+	}
+
+	let head = 0;
+	while (head < queue.length) {
+		const m = queue[head++];
+		const x = m % imgSize;
+		const y = (m - x) / imgSize;
+		if (x > dx) push(x - 1, y);
+		if (x < dx + dw - 1) push(x + 1, y);
+		if (y > dy) push(x, y - 1);
+		if (y < dy + dh - 1) push(x, y + 1);
+	}
+	return mask;
+}
+
+export interface ParticleLiveOptions {
+	speed?: number;
+	size?: number;
+	density?: number;
+	repulsion?: number;
+}
+
 export function createParticleEngine(opts: ParticleEngineOptions) {
 	const cv = opts.canvas;
 	const burstCv = opts.burstCanvas ?? null;
@@ -104,6 +179,22 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 	let currentMode: SampleMode = 'shape';
 	let currentAlign: SampleAlign = 'center';
 	let currentVAlign: SampleVAlign = 'center';
+
+	let speedScale = 1;
+	let sizeScale = 1;
+	let densityScale = 1;
+	let repulsionR = 100;
+	let excited = false;
+
+	const baseWanderVal = () => BASE_WANDER * speedScale;
+	const fastWanderVal = () => FAST_WANDER * speedScale;
+	const baseRotVal = () => BASE_ROT * speedScale;
+	const fastRotVal = () => FAST_ROT * speedScale;
+
+	function applyTargets() {
+		rotSpeedTarget = spinEnabled ? (excited ? fastRotVal() : baseRotVal()) : 0;
+		wanderTarget = excited ? fastWanderVal() : baseWanderVal();
+	}
 
 	function sourceSize(source: SampleSource): { sw: number; sh: number } {
 		if (source instanceof HTMLCanvasElement) {
@@ -162,7 +253,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 		const data = octx.getImageData(0, 0, imgSize, imgSize).data;
 
 		const mob = W < 768;
-		const gap = mob ? 4 : 3;
+		const gap = Math.max(2, Math.round((mob ? 4 : 3) / densityScale));
 
 		let ox: number;
 		if (alignEff === 'left') ox = (W * 0.5 - imgSize) / 2;
@@ -173,13 +264,26 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 		formCy = oy + imgSize / 2;
 
 		const next: Particle[] = [];
+		let bgMask: Uint8Array | null = null;
+		if (mode === 'shape') {
+			let anyTrans = false;
+			for (let py = dy; py < dy + dh && !anyTrans; py++) {
+				for (let px = dx; px < dx + dw; px++) {
+					if (data[(py * imgSize + px) * 4 + 3] < 255) {
+						anyTrans = true;
+						break;
+					}
+				}
+			}
+			if (!anyTrans) bgMask = edgeKeyBackground(data, imgSize, dx, dy, dw, dh);
+		}
 		for (let py = dy; py < dy + dh; py += gap) {
 			for (let px = dx; px < dx + dw; px += gap) {
 				const i = (py * imgSize + px) * 4;
 				const a = data[i + 3];
 				let c: string | null = null;
 				if (mode === 'shape') {
-					if (a > 128) c = pickColor();
+					if (a > 128 && !bgMask?.[py * imgSize + px]) c = pickColor();
 				} else if (a > 0) {
 					c = `rgb(${data[i]}, ${data[i + 1]}, ${data[i + 2]})`;
 				}
@@ -269,7 +373,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 		ctx.rotate(p.rot ?? 0);
 		ctx.globalAlpha = alpha;
 		ctx.fillStyle = fill;
-		const s = p.s;
+		const s = p.s * sizeScale;
 		if (p.kind === 'circle') {
 			ctx.beginPath();
 			ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
@@ -349,7 +453,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 				const mdx = p.x - mx;
 				const mdy = p.y - my;
 				const md2 = mdx * mdx + mdy * mdy;
-				const R = 100;
+				const R = repulsionR;
 				if (md2 < R * R) {
 					const dd = Math.sqrt(md2) || 1;
 					const f = ((R - dd) / R) * 1.2;
@@ -375,7 +479,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 			const mdx = p.x - mx;
 			const mdy = p.y - my;
 			const md2 = mdx * mdx + mdy * mdy;
-			const R = 100;
+			const R = repulsionR;
 			if (md2 < R * R) {
 				const dd = Math.sqrt(md2) || 1;
 				const f = ((R - dd) / R) * 3.4;
@@ -390,7 +494,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 
 			ctx.globalAlpha = ink.alpha;
 			ctx.fillStyle = ink.fill;
-			ctx.fillRect(p.x, p.y, p.s, p.s);
+			ctx.fillRect(p.x, p.y, p.s * sizeScale, p.s * sizeScale);
 		}
 		ctx.globalAlpha = 1;
 
@@ -441,17 +545,29 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 
 	function setSpin(on: boolean) {
 		spinEnabled = on;
-		rotSpeedTarget = on ? BASE_ROT : 0;
+		applyTargets();
 	}
 
 	function excite() {
-		if (spinEnabled) rotSpeedTarget = FAST_ROT;
-		wanderTarget = FAST_WANDER;
+		excited = true;
+		applyTargets();
 		if (moveTimer) clearTimeout(moveTimer);
 		moveTimer = setTimeout(() => {
-			rotSpeedTarget = spinEnabled ? BASE_ROT : 0;
-			wanderTarget = BASE_WANDER;
+			excited = false;
+			applyTargets();
 		}, 600);
+	}
+
+	function setLive(o: ParticleLiveOptions) {
+		const densityChanged = o.density !== undefined && o.density !== densityScale;
+		if (o.speed !== undefined) speedScale = Math.min(3, Math.max(0, o.speed));
+		if (o.size !== undefined) sizeScale = Math.min(3, Math.max(0.25, o.size));
+		if (o.density !== undefined) densityScale = Math.min(3, Math.max(0.25, o.density));
+		if (o.repulsion !== undefined) repulsionR = Math.min(300, Math.max(20, o.repulsion));
+		applyTargets();
+		if (densityChanged && currentSource && !scatter) {
+			sampleImage(currentSource, currentMode, true);
+		}
 	}
 
 	function setMouse(clientX: number, clientY: number) {
@@ -540,6 +656,7 @@ export function createParticleEngine(opts: ParticleEngineOptions) {
 		start,
 		stop,
 		setSpin,
+		setLive,
 		setMouse,
 		clearMouse,
 		spawnBurst,
