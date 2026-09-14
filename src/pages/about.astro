@@ -35,12 +35,10 @@ const groups = [
 		<!-- Page header -->
 		<section class="page-head section">
 			<div class="container">
-				<p class="kicker" data-anim>About</p>
 				<h1 class="headline" data-anim>A solo shop, built to follow through.</h1>
 				<p class="lead" data-anim>
 					Iterate Prairie Tech is a one-person, small-town web and IT operation. No account
-					managers, no handoff deck, no vanishing act after launch, just one person who builds
-					it and sticks around.
+					managers and no handoff deck. I build it and stick around after launch.
 				</p>
 			</div>
 		</section>
@@ -66,9 +64,9 @@ const groups = [
 						check-in.
 					</p>
 					<p>
-						Tech support isn't a loop, it's a relationship. Every fix gets a follow-up to make
-						sure it actually held, and the client list stays small enough that follow-up is
-						realistic instead of a promise I can't keep.
+						Tech support is a relationship. Every fix gets a follow-up to make sure it actually
+						held, and the client list stays small enough that follow-up is realistic instead of
+						a promise I can't keep.
 					</p>
 				</div>
 				<div class="two-col__media" data-anim>
@@ -82,7 +80,7 @@ const groups = [
 			<div class="container">
 				<div class="follow-head" data-anim>
 					<h2 class="section-title">How each side follows through.</h2>
-					<p class="lead">Different kind of follow-through for different kind of work.</p>
+					<p class="lead">A different kind of follow-through for a different kind of work.</p>
 				</div>
 				<div class="groups">
 					{
@@ -146,9 +144,14 @@ const groups = [
 
 	.group {
 		padding: 2rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
+		background: var(--bg-2);
+		border: none;
 		border-radius: var(--radius);
+		border-top: 3px solid var(--accent);
+	}
+
+	.group:nth-child(2) {
+		border-top-color: var(--sky);
 	}
 
 	.group h3 {

@@ -2,6 +2,7 @@
 ---
 
 <canvas class="particle-canvas" data-particle-canvas></canvas>
+<canvas class="burst-canvas" data-burst-canvas></canvas>
 
 <style>
 	.particle-canvas {
@@ -10,7 +11,16 @@
 		width: 100%;
 		height: 100%;
 		display: block;
-		opacity: 0.35;
+		opacity: 1;
+	}
+
+	.burst-canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		display: block;
+		pointer-events: none;
 	}
 </style>
 
@@ -21,6 +31,8 @@
 
 	const cv = document.querySelector<HTMLCanvasElement>('[data-particle-canvas]');
 	if (!cv) throw new Error('particle canvas not found');
+	const burstCv = document.querySelector<HTMLCanvasElement>('[data-burst-canvas]');
+	const bctx = burstCv?.getContext('2d') ?? null;
 
 	const ctx = cv.getContext('2d')!;
 	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -34,7 +46,15 @@
 		s: number;
 	}
 
+	interface Burst {
+		x: number; y: number;
+		vx: number; vy: number;
+		s: number;
+		c: string;
+	}
+
 	let particles: Particle[] = [];
+	let bursts: Burst[] = [];
 	let W = 0, H = 0, cx = 0, cy = 0;
 	let formCx = 0, formCy = 0;
 	let spinEnabled = true;
@@ -51,23 +71,31 @@
 	let proofTimer: ReturnType<typeof setTimeout> | null = null;
 	let capIndex = 0;
 
-	// Motion state — lerped each frame for smooth ramping
+	// Motion state, lerped each frame for smooth ramping
 	let rotation = 0;
-	let rotSpeed = -0.002;
-	let rotSpeedTarget = -0.002;
-	let wander = 4;
-	let wanderTarget = 4;
+	let rotSpeed = -0.0006;
+	let rotSpeedTarget = -0.0006;
+	let wander = 1.2;
+	let wanderTarget = 1.2;
 	let spread = 0;            // 0 = tight formation, 1 = fully dispersed
 	let time = 0;
 
 	const mouse = { x: -9999, y: -9999 };
 
-	const BASE_ROT = -0.002;   // negative = counter-clockwise
-	const FAST_ROT = -0.006;   // peak interaction speed (slightly slower than before)
-	const BASE_WANDER = 4;
-	const FAST_WANDER = 10;
-	const RAMP = 0.04;         // slower lerp = smoother ramp between states
-	const MAX_SPREAD_DIST = 0.5; // max radial push as fraction of viewport min-dimension
+	const BASE_ROT = -0.0006;
+	const FAST_ROT = -0.0018;
+	const BASE_WANDER = 1.2;
+	const FAST_WANDER = 3.5;
+	const RAMP = 0.04;
+	const MAX_SPREAD_DIST = 0.22;
+	const CREAM = '#F2EFEB';
+	const CHARCOAL = '#2C2C2A';
+	const footerEl = document.querySelector<HTMLElement>('[data-footer]');
+
+	function inkForGround(c: string, dark: boolean): string {
+		if (c === '#38B6FF' || c === '#FF7870') return c;
+		return dark ? CREAM : CHARCOAL;
+	}
 
 	type SampleSource = HTMLImageElement | HTMLCanvasElement;
 	type SampleMode = 'shape' | 'photo';
@@ -75,6 +103,13 @@
 
 	function pickColor(): string {
 		const r = Math.random();
+		const onCharcoalHero =
+			document.documentElement.classList.contains('is-home') && currentBeat === 'logo';
+		if (onCharcoalHero) {
+			if (r < 0.08) return '#38B6FF';
+			if (r < 0.28) return '#FF7870';
+			return '#F2EFEB';
+		}
 		if (r < 0.04) return '#38B6FF';
 		if (r < 0.16) return '#FF7870';
 		return '#2C2C2A';
@@ -92,6 +127,7 @@
 		mode: SampleMode = 'shape',
 		morph = true,
 		align: SampleAlign = 'center',
+		vAlign: 'center' | 'upper' = 'center',
 	) {
 		if (!source || !W || !H) return;
 		if (source === img && !imgLoaded) return;
@@ -132,13 +168,15 @@
 		const data = octx.getImageData(0, 0, imgSize, imgSize).data;
 
 		const mob = W < 768;
-		const gap = mob ? 7 : 5;
+		const gap = mob ? 4 : 3;
 
 		let ox: number;
 		if (alignEff === 'left') ox = (W * 0.5 - imgSize) / 2;
 		else if (alignEff === 'right') ox = W * 0.5 + (W * 0.5 - imgSize) / 2;
 		else ox = (W - imgSize) / 2;
-		const oy = (H - imgSize) / 2;
+		// 'upper' seats the formation center at ~30% viewport height so the
+		// footer beat's tagline clears the footer's own DOM tagline (~48%+).
+		const oy = vAlign === 'upper' ? Math.round(H * 0.3 - imgSize / 2) : (H - imgSize) / 2;
 		formCx = ox + imgSize / 2;
 		formCy = oy + imgSize / 2;
 
@@ -166,8 +204,8 @@
 			}
 		}
 
-		if (next.length > 2600) {
-			const skip = Math.ceil(next.length / 2600);
+		if (next.length > 5200) {
+			const skip = Math.ceil(next.length / 5200);
 			const kept = next.filter((_, i) => i % skip === 0);
 			next.length = 0;
 			next.push(...kept);
@@ -178,21 +216,19 @@
 			return;
 		}
 
+		// Capture the count before the loop. particles grows as we push, so
+		// indexing against its live length would send every overflow particle
+		// to particles[0]. Overflow spawns at its own random position instead,
+		// identical to a fresh build, so every trigger looks the same.
+		const donorCount = particles.length;
 		for (let i = 0; i < next.length; i++) {
-			if (i < particles.length) {
+			if (i < donorCount) {
 				particles[i].tx = next[i].tx;
 				particles[i].ty = next[i].ty;
 				particles[i].c = next[i].c;
 				particles[i].s = next[i].s;
 			} else {
-				const donor = particles[i % particles.length];
-				particles.push({
-					...next[i],
-					x: donor.x,
-					y: donor.y,
-					vx: donor.vx,
-					vy: donor.vy,
-				});
+				particles.push({ ...next[i] });
 			}
 		}
 		particles.length = next.length;
@@ -208,6 +244,11 @@
 		cv.width = Math.round(W * dpr);
 		cv.height = Math.round(H * dpr);
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		if (burstCv && bctx) {
+			burstCv.width = Math.round(W * dpr);
+			burstCv.height = Math.round(H * dpr);
+			bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		}
 		if (imgLoaded) applyBeat(currentBeat, true);
 	}
 
@@ -246,6 +287,10 @@
 		const cvr = cv.getBoundingClientRect();
 		const mx = mouse.x - cvr.left;
 		const my = mouse.y - cvr.top;
+		const charcoalBottom = document.documentElement.classList.contains('is-home')
+			? window.innerHeight - window.scrollY
+			: -1e9;
+		const ft = footerEl?.getBoundingClientRect();
 
 		const cosR = Math.cos(rotation);
 		const sinR = Math.sin(rotation);
@@ -288,8 +333,31 @@
 			p.x += p.vx;
 			p.y += p.vy;
 
-			ctx.fillStyle = p.c;
+			const vy = cvr.top + p.y;
+			const dark = vy < charcoalBottom || (!!ft && vy >= ft.top && vy <= ft.bottom);
+			ctx.globalAlpha = dark ? 1 : 0.35;
+			ctx.fillStyle = inkForGround(p.c, dark);
 			ctx.fillRect(p.x, p.y, p.s, p.s);
+		}
+		ctx.globalAlpha = 1;
+
+		if (bctx) {
+			bctx.clearRect(0, 0, W, H);
+			for (let i = bursts.length - 1; i >= 0; i--) {
+				const b = bursts[i];
+				b.x += b.vx;
+				b.y += b.vy;
+				if (b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40) {
+					bursts.splice(i, 1);
+					continue;
+				}
+				const vy = cvr.top + b.y;
+				const dark = vy < charcoalBottom || (!!ft && vy >= ft.top && vy <= ft.bottom);
+				bctx.globalAlpha = dark ? 1 : 0.35;
+				bctx.fillStyle = inkForGround(b.c, dark);
+				bctx.fillRect(b.x, b.y, b.s, b.s);
+			}
+			bctx.globalAlpha = 1;
 		}
 
 		raf = requestAnimationFrame(frame);
@@ -430,12 +498,14 @@
 		else if (beat === 'proof') startProof(morph, align);
 		else if (beat === 'reliability') sampleImage(relIcon ?? img, 'shape', morph, align);
 		else if (beat === 'footer') {
+			// Paint exactly once: immediately if fonts are already loaded,
+			// otherwise after fonts.ready. The old code painted twice (once
+			// per branch), rebuilding the tagline mid-flight and smearing it.
 			const paint = () => {
-				if (currentBeat === 'footer') sampleImage(drawTagline(), 'shape', morph, align);
+				if (currentBeat === 'footer') sampleImage(drawTagline(), 'shape', morph, align, 'upper');
 			};
 			if (document.fonts?.status === 'loaded') paint();
 			else void document.fonts?.ready.then(paint);
-			paint();
 		}
 		else sampleImage(img, 'shape', morph, align);
 	}
@@ -463,6 +533,33 @@
 		mouse.x = -9999;
 		mouse.y = -9999;
 	});
+
+	function spawnBurst(clientX: number, clientY: number) {
+		if (!burstCv) return;
+		const cvr = burstCv.getBoundingClientRect();
+		const x = clientX - cvr.left;
+		const y = clientY - cvr.top;
+		const count = W < 768 ? 48 : 72;
+		for (let i = 0; i < count; i++) {
+			const ang = Math.random() * Math.PI * 2;
+			const spd = 8 + Math.random() * 18;
+			const r = Math.random();
+			bursts.push({
+				x,
+				y,
+				vx: Math.cos(ang) * spd,
+				vy: Math.sin(ang) * spd,
+				s: 2 + Math.random() * 3.5,
+				c: r < 0.08 ? '#38B6FF' : r < 0.28 ? '#FF7870' : '#F2EFEB',
+			});
+		}
+		if (bursts.length > 420) bursts.splice(0, bursts.length - 420);
+	}
+
+	window.addEventListener('ipt:heroburst', ((e: Event) => {
+		const { x, y } = (e as CustomEvent<{ x: number; y: number }>).detail;
+		spawnBurst(x, y);
+	}) as EventListener);
 
 	// --- Init ---
 

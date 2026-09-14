@@ -10,17 +10,17 @@ const tiers = [
 	{
 		name: 'Single-page site',
 		price: '$650',
-		desc: 'One scrolling page — perfect for a simple presence with your story, services, and contact info.',
+		desc: 'One scrolling page. A simple presence with your story, services, and contact info.',
 	},
 	{
 		name: 'Standard multi-page',
 		price: '$950',
-		desc: 'Home, About, Services, Contact — the usual setup, with room to grow.',
+		desc: 'Home, About, Services, Contact. The usual setup, with room to grow.',
 		featured: true,
 	},
 	{
 		name: 'Multi-brand hub',
-		price: '$400–$600 add-on',
+		price: '$400 to $600 add-on',
 		desc: 'A shared site for two related businesses, like a co-op pairing or a family brand, each with its own section, without paying to build and host two sites from scratch.',
 	},
 ];
@@ -41,7 +41,6 @@ const addons = [
 	<main>
 		<section class="page-head section">
 			<div class="container">
-				<p class="kicker" data-anim>Service &middot; Web Development</p>
 				<h1 class="headline" data-anim>Websites that load fast and last.</h1>
 				<p class="lead" data-anim>
 					Modern sites built with Astro and GSAP, hosted free on GitHub Pages, with DNS
@@ -59,8 +58,7 @@ const addons = [
 					<p>
 						<strong>Astro</strong> builds static HTML by default, which means pages load fast
 						and there's almost nothing to break. <strong>GSAP</strong> handles motion and
-						scroll animations — the kind of polish that makes a site feel intentional, not
-						templated.
+						scroll animations, so the site feels considered instead of templated.
 					</p>
 					<p>
 						Hosting runs on <strong>GitHub Pages</strong>, so it's free and reliable. DNS goes
@@ -78,7 +76,7 @@ const addons = [
 					</p>
 				</div>
 				<div class="two-col__media" data-anim>
-					<PhotoPlaceholder label="Photo placeholder — example site" ratio="4 / 3" />
+					<PhotoPlaceholder label="Photo placeholder: example site" ratio="4 / 3" />
 				</div>
 			</div>
 		</section>
@@ -107,7 +105,7 @@ const addons = [
 					<ul>
 						{addons.map((a) => <li>{a}</li>)}
 					</ul>
-					<p class="addons-note">Priced per project — just describe what you need and you'll get a clear quote.</p>
+					<p class="addons-note">Priced per project. Describe what you need and you'll get a clear quote.</p>
 				</div>
 			</div>
 		</section>
@@ -177,8 +175,8 @@ const addons = [
 	}
 
 	.tier.is-featured {
-		border-color: var(--accent);
-		box-shadow: 0 12px 32px -16px rgba(255, 120, 112, 0.5);
+		border-color: var(--border);
+		border-left: 3px solid var(--accent);
 	}
 
 	.tier h3 {

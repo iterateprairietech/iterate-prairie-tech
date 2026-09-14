@@ -77,6 +77,14 @@ const { activePath = '/' } = Astro.props;
 	.brand {
 		display: inline-flex;
 		align-items: center;
+		padding: 0.3rem 0.7rem;
+		border-radius: 12px;
+		background: transparent;
+		transition: background 0.3s ease;
+	}
+
+	:global(html.is-home) .site-nav:not(.is-scrolled) .brand {
+		background: #F2EFEB;
 	}
 
 	.brand img {
@@ -108,6 +116,18 @@ const { activePath = '/' } = Astro.props;
 		font-size: 0.9rem;
 		font-weight: 600;
 		transition: color 0.25s ease;
+	}
+
+	:global(html.is-home) .site-nav:not(.is-scrolled):not(.is-open) .nav-link {
+		color: #F2EFEB;
+	}
+
+	:global(html.is-home) .site-nav:not(.is-scrolled) .nav-toggle {
+		border-color: rgba(242, 239, 235, 0.28);
+	}
+
+	:global(html.is-home) .site-nav:not(.is-scrolled) .nav-toggle span {
+		background: #F2EFEB;
 	}
 
 	.nav-link.is-active {
