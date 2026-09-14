@@ -207,6 +207,10 @@ const groups = [
 	if (prefersReduced) {
 		gsap.set('[data-anim]', { opacity: 1, clearProps: 'transform' });
 	} else {
+		gsap.fromTo('.page-head [data-anim]', { y: 24 }, {
+			opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', delay: 0.15,
+		});
+
 		gsap.fromTo('[data-mission] [data-anim]', { y: 24 }, {
 			opacity: 1, y: 0, duration: 0.6, stagger: 0.12, ease: 'power3.out',
 			scrollTrigger: { trigger: '[data-mission]', start: 'top 80%' },

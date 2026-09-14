@@ -8,6 +8,7 @@ const links: NavLink[] = [
 	{ label: 'Home', href: '/' },
 	{ label: 'About', href: '/about' },
 	{ label: 'Services', href: '/services' },
+	{ label: 'Proof', href: '/proof' },
 ];
 
 const { activePath = '/' } = Astro.props;
@@ -16,7 +17,7 @@ const { activePath = '/' } = Astro.props;
 <header class="site-nav" data-nav>
 	<div class="container nav-inner">
 		<a class="brand" href="/" aria-label="Iterate Prairie Tech home">
-			<img src="/Iterate Prairie Tech (Header) (675px by 100px).png" alt="Iterate Prairie Tech" width="675" height="100" />
+			<img src="/Iterate Prairie Tech (Header) (675px by 100px).png" alt="Iterate Prairie Tech" width="474" height="62" />
 		</a>
 
 		<nav class="nav-links" data-nav-links>
@@ -77,10 +78,16 @@ const { activePath = '/' } = Astro.props;
 	.brand {
 		display: inline-flex;
 		align-items: center;
-		padding: 0.3rem 0.7rem;
-		border-radius: 12px;
+		padding: 0.1rem 0.35rem;
+		border-radius: 8px;
 		background: transparent;
-		transition: background 0.3s ease;
+		transition:
+			background 0.3s ease,
+			transform 0.25s ease;
+	}
+
+	.brand:hover {
+		transform: scale(1.05);
 	}
 
 	:global(html.is-home) .site-nav:not(.is-scrolled) .brand {
@@ -88,17 +95,12 @@ const { activePath = '/' } = Astro.props;
 	}
 
 	.brand img {
-		height: 4rem;
+		height: 2.5rem;
 		width: auto;
 		border-radius: 0;
 		object-fit: contain;
 		background: transparent;
 		border: none;
-		transition: transform 0.25s ease;
-	}
-
-	.brand:hover img {
-		transform: scale(1.05);
 	}
 
 	.nav-links {

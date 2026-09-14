@@ -30,6 +30,13 @@ const headline = ['Built', 'for', "what's", 'now.', 'Ready', 'for', "what's", 'n
 	<a class="scroll-cue" href="#services-preview" data-anim data-scrollcue aria-label="Scroll to services">
 		<span class="scroll-cue__dot"></span>
 	</a>
+
+	<div class="click-cue" data-anim data-clickcue aria-hidden="true">
+		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+			<path d="M5 3l14 8-6.5 1.5L9 19 5 3z" stroke-linejoin="round" />
+		</svg>
+		<span>Click or tap the background</span>
+	</div>
 </section>
 
 <style>
@@ -114,9 +121,40 @@ const headline = ['Built', 'for', "what's", 'now.', 'Ready', 'for', "what's", 'n
 		background: var(--accent);
 	}
 
+	.click-cue {
+		position: absolute;
+		bottom: 1.75rem;
+		left: 2rem;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		padding: 0.5rem 0.9rem;
+		border: 1px solid rgba(242, 239, 235, 0.28);
+		border-radius: 999px;
+		color: rgba(242, 239, 235, 0.72);
+		font-family: Sora, Inter, sans-serif;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		pointer-events: none;
+	}
+
+	.click-cue svg {
+		flex: none;
+		color: var(--accent);
+	}
+
 	@media (max-width: 640px) {
 		.scroll-cue {
 			display: none;
+		}
+
+		.click-cue {
+			left: 50%;
+			transform: translateX(-50%);
+			white-space: nowrap;
 		}
 	}
 </style>
@@ -156,7 +194,8 @@ const headline = ['Built', 'for', "what's", 'now.', 'Ready', 'for', "what's", 'n
 				{ opacity: 1, y: 0, duration: 0.5, stagger: 0.09 },
 				'-=0.35',
 			)
-			.fromTo('[data-scrollcue]', {}, { opacity: 1, duration: 0.5 }, '-=0.2');
+			.fromTo('[data-scrollcue]', {}, { opacity: 1, duration: 0.5 }, '-=0.2')
+			.fromTo('[data-clickcue]', {}, { opacity: 1, duration: 0.5 }, '-=0.3');
 
 		gsap.to('.hero-content', {
 			y: -50,

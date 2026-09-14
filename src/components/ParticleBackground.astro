@@ -25,559 +25,215 @@
 </style>
 
 <script>
-	// Particle background: renders the loop PNG as interactive particles.
-	// Motion layers: idle wander, mouse repulsion, scroll-driven spread + rotation.
-	// Vanilla Canvas 2D + requestAnimationFrame.
+	import { createParticleEngine, defaultPickColor, loadImage } from '../lib/particleEngine';
+	import type { SampleAlign } from '../lib/particleEngine';
 
 	const cv = document.querySelector<HTMLCanvasElement>('[data-particle-canvas]');
 	if (!cv) throw new Error('particle canvas not found');
 	const burstCv = document.querySelector<HTMLCanvasElement>('[data-burst-canvas]');
-	const bctx = burstCv?.getContext('2d') ?? null;
-
-	const ctx = cv.getContext('2d')!;
 	const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-	interface Particle {
-		x: number; y: number;
-		vx: number; vy: number;
-		tx: number; ty: number;
-		phase: number;
-		c: string;
-		s: number;
-	}
-
-	interface Burst {
-		x: number; y: number;
-		vx: number; vy: number;
-		s: number;
-		c: string;
-	}
-
-	let particles: Particle[] = [];
-	let bursts: Burst[] = [];
-	let W = 0, H = 0, cx = 0, cy = 0;
-	let formCx = 0, formCy = 0;
-	let spinEnabled = true;
-	let dpr = Math.min(2, window.devicePixelRatio || 1);
-	let running = false;
-	let raf = 0;
-	let imgLoaded = false;
-	let img: HTMLImageElement | null = null;
-	let webIcon: HTMLImageElement | null = null;
-	let itIcon: HTMLImageElement | null = null;
-	let relIcon: HTMLImageElement | null = null;
-	let currentBeat = 'logo';
-	let capTimer: ReturnType<typeof setInterval> | null = null;
-	let proofTimer: ReturnType<typeof setTimeout> | null = null;
-	let capIndex = 0;
-
-	// Motion state, lerped each frame for smooth ramping
-	let rotation = 0;
-	let rotSpeed = -0.0006;
-	let rotSpeedTarget = -0.0006;
-	let wander = 1.2;
-	let wanderTarget = 1.2;
-	let spread = 0;            // 0 = tight formation, 1 = fully dispersed
-	let time = 0;
-
-	const mouse = { x: -9999, y: -9999 };
-
-	const BASE_ROT = -0.0006;
-	const FAST_ROT = -0.0018;
-	const BASE_WANDER = 1.2;
-	const FAST_WANDER = 3.5;
-	const RAMP = 0.04;
-	const MAX_SPREAD_DIST = 0.22;
-	const CREAM = '#F2EFEB';
-	const CHARCOAL = '#2C2C2A';
-	const footerEl = document.querySelector<HTMLElement>('[data-footer]');
-
-	function inkForGround(c: string, dark: boolean): string {
-		if (c === '#38B6FF' || c === '#FF7870') return c;
-		return dark ? CREAM : CHARCOAL;
-	}
-
-	type SampleSource = HTMLImageElement | HTMLCanvasElement;
-	type SampleMode = 'shape' | 'photo';
-	type SampleAlign = 'center' | 'left' | 'right';
-
-	function pickColor(): string {
-		const r = Math.random();
-		const onCharcoalHero =
-			document.documentElement.classList.contains('is-home') && currentBeat === 'logo';
-		if (onCharcoalHero) {
-			if (r < 0.08) return '#38B6FF';
-			if (r < 0.28) return '#FF7870';
-			return '#F2EFEB';
-		}
-		if (r < 0.04) return '#38B6FF';
-		if (r < 0.16) return '#FF7870';
-		return '#2C2C2A';
-	}
-
-	function sourceSize(source: SampleSource): { sw: number; sh: number } {
-		if (source instanceof HTMLCanvasElement) {
-			return { sw: source.width, sh: source.height };
-		}
-		return { sw: source.naturalWidth, sh: source.naturalHeight };
-	}
-
-	function sampleImage(
-		source: SampleSource | null = img,
-		mode: SampleMode = 'shape',
-		morph = true,
-		align: SampleAlign = 'center',
-		vAlign: 'center' | 'upper' = 'center',
-	) {
-		if (!source || !W || !H) return;
-		if (source === img && !imgLoaded) return;
-
-		const { sw, sh } = sourceSize(source);
-		if (!sw || !sh) return;
-
-		// Match the CSS breakpoint exactly (canvas width excludes the desktop
-		// scrollbar, so comparing W directly can disagree with the media query).
-		const narrow = window.matchMedia('(max-width: 820px)').matches;
-		const alignEff: SampleAlign = narrow ? 'center' : align;
-		const imgSize =
-			alignEff === 'center'
-				? Math.round(Math.min(W, H) * 1.0)
-				: Math.round(Math.min(W * 0.48, H) * 0.78);
-		const srcAspect = sw / sh;
-
-		// Aspect-preserving contain into a square canvas; letterbox the unused axis.
-		let dw: number, dh: number, dx: number, dy: number;
-		if (srcAspect > 1) {
-			dw = imgSize;
-			dh = Math.round(imgSize / srcAspect);
-			dx = 0;
-			dy = Math.round((imgSize - dh) / 2);
-		} else {
-			dh = imgSize;
-			dw = Math.round(imgSize * srcAspect);
-			dy = 0;
-			dx = Math.round((imgSize - dw) / 2);
-		}
-
-		const off = document.createElement('canvas');
-		off.width = imgSize;
-		off.height = imgSize;
-		const octx = off.getContext('2d')!;
-		octx.clearRect(0, 0, imgSize, imgSize);
-		octx.drawImage(source, 0, 0, sw, sh, dx, dy, dw, dh);
-		const data = octx.getImageData(0, 0, imgSize, imgSize).data;
-
-		const mob = W < 768;
-		const gap = mob ? 4 : 3;
-
-		let ox: number;
-		if (alignEff === 'left') ox = (W * 0.5 - imgSize) / 2;
-		else if (alignEff === 'right') ox = W * 0.5 + (W * 0.5 - imgSize) / 2;
-		else ox = (W - imgSize) / 2;
-		// 'upper' seats the formation center at ~30% viewport height so the
-		// footer beat's tagline clears the footer's own DOM tagline (~48%+).
-		const oy = vAlign === 'upper' ? Math.round(H * 0.3 - imgSize / 2) : (H - imgSize) / 2;
-		formCx = ox + imgSize / 2;
-		formCy = oy + imgSize / 2;
-
-		const next: Particle[] = [];
-		for (let py = dy; py < dy + dh; py += gap) {
-			for (let px = dx; px < dx + dw; px += gap) {
-				const i = (py * imgSize + px) * 4;
-				const a = data[i + 3];
-				let c: string | null = null;
-				if (mode === 'shape') {
-					if (a > 128) c = pickColor();
-				} else if (a > 0) {
-					c = `rgb(${data[i]}, ${data[i + 1]}, ${data[i + 2]})`;
-				}
-				if (c === null) continue;
-				next.push({
-					x: Math.random() * W,
-					y: Math.random() * H,
-					vx: 0, vy: 0,
-					tx: ox + px, ty: oy + py,
-					phase: Math.random() * Math.PI * 2,
-					c,
-					s: mob ? Math.random() * 2.0 + 2.5 : Math.random() * 1.8 + 2.2,
-				});
-			}
-		}
-
-		if (next.length > 5200) {
-			const skip = Math.ceil(next.length / 5200);
-			const kept = next.filter((_, i) => i % skip === 0);
-			next.length = 0;
-			next.push(...kept);
-		}
-
-		if (!morph || particles.length === 0) {
-			particles = next;
-			return;
-		}
-
-		// Capture the count before the loop. particles grows as we push, so
-		// indexing against its live length would send every overflow particle
-		// to particles[0]. Overflow spawns at its own random position instead,
-		// identical to a fresh build, so every trigger looks the same.
-		const donorCount = particles.length;
-		for (let i = 0; i < next.length; i++) {
-			if (i < donorCount) {
-				particles[i].tx = next[i].tx;
-				particles[i].ty = next[i].ty;
-				particles[i].c = next[i].c;
-				particles[i].s = next[i].s;
-			} else {
-				particles.push({ ...next[i] });
-			}
-		}
-		particles.length = next.length;
-	}
-
-	function resize() {
-		const rect = cv.getBoundingClientRect();
-		W = Math.round(rect.width);
-		H = Math.round(rect.height);
-		if (W === 0 || H === 0) return;
-		cx = W / 2;
-		cy = H / 2;
-		cv.width = Math.round(W * dpr);
-		cv.height = Math.round(H * dpr);
-		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-		if (burstCv && bctx) {
-			burstCv.width = Math.round(W * dpr);
-			burstCv.height = Math.round(H * dpr);
-			bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-		}
-		if (imgLoaded) applyBeat(currentBeat, true);
-	}
-
-	function frame() {
-		if (!running) return;
-		time += 0.016;
-
-		// Smooth ramp for rotation and wander
-		wander += (wanderTarget - wander) * RAMP;
-		if (spinEnabled) {
-			rotSpeed += (rotSpeedTarget - rotSpeed) * RAMP;
-			rotation += rotSpeed;
-		} else {
-			rotSpeed += (0 - rotSpeed) * RAMP;
-			rotation += (0 - rotation) * RAMP;
-		}
-
-		const beat = detectBeat();
-		if (beat !== currentBeat) applyBeat(beat, true);
-
-		// Scroll-position-driven spread: 0% at top, 100% at 33% page scroll.
-		// Only while the logo beat is active; later beats stay formed.
-		const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-		const scrollFraction = window.scrollY / scrollable;
-		const spreadTarget = currentBeat === 'logo' ? Math.min(1, scrollFraction / 0.33) : 0;
-		spread += (spreadTarget - spread) * RAMP;
-
-		const maxSpreadPx = Math.min(W, H) * MAX_SPREAD_DIST;
-
-		ctx.clearRect(0, 0, W, H);
-
-		// The bg-layer is parallaxed via GSAP (yPercent up to 12), which shifts
-		// the canvas visually without changing its drawing coordinates. Map the
-		// mouse from viewport coords into canvas coords so repulsion tracks
-		// the actual cursor position regardless of scroll.
-		const cvr = cv.getBoundingClientRect();
-		const mx = mouse.x - cvr.left;
-		const my = mouse.y - cvr.top;
-		const charcoalBottom = document.documentElement.classList.contains('is-home')
-			? window.innerHeight - window.scrollY
-			: -1e9;
-		const ft = footerEl?.getBoundingClientRect();
-
-		const cosR = Math.cos(rotation);
-		const sinR = Math.sin(rotation);
-
-		for (let i = 0; i < particles.length; i++) {
-			const p = particles[i];
-
-			// Rotate in place around the formation origin (not the viewport center)
-			const dx = p.tx - formCx;
-			const dy = p.ty - formCy;
-			const rx = dx * cosR - dy * sinR + formCx;
-			const ry = dx * sinR + dy * cosR + formCy;
-
-			// Scroll spread: push outward from the formation origin
-			const sx = rx + (rx - formCx) * spread * maxSpreadPx / Math.max(1, Math.min(W, H) * 0.4);
-			const sy = ry + (ry - formCy) * spread * maxSpreadPx / Math.max(1, Math.min(W, H) * 0.4);
-
-			// Idle wander
-			const wx = sx + Math.sin(time * 0.8 + p.phase) * wander;
-			const wy = sy + Math.cos(time * 0.6 + p.phase * 1.3) * wander;
-
-			// Spring force
-			let ax = (wx - p.x) * 0.02;
-			let ay = (wy - p.y) * 0.02;
-
-			// Mouse repulsion
-			const mdx = p.x - mx;
-			const mdy = p.y - my;
-			const md2 = mdx * mdx + mdy * mdy;
-			const R = 100;
-			if (md2 < R * R) {
-				const dd = Math.sqrt(md2) || 1;
-				const f = (R - dd) / R * 3.4;
-				ax += (mdx / dd) * f;
-				ay += (mdy / dd) * f;
-			}
-
-			p.vx = (p.vx + ax) * 0.86;
-			p.vy = (p.vy + ay) * 0.86;
-			p.x += p.vx;
-			p.y += p.vy;
-
-			const vy = cvr.top + p.y;
-			const dark = vy < charcoalBottom || (!!ft && vy >= ft.top && vy <= ft.bottom);
-			ctx.globalAlpha = dark ? 1 : 0.35;
-			ctx.fillStyle = inkForGround(p.c, dark);
-			ctx.fillRect(p.x, p.y, p.s, p.s);
-		}
-		ctx.globalAlpha = 1;
-
-		if (bctx) {
-			bctx.clearRect(0, 0, W, H);
-			for (let i = bursts.length - 1; i >= 0; i--) {
-				const b = bursts[i];
-				b.x += b.vx;
-				b.y += b.vy;
-				if (b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40) {
-					bursts.splice(i, 1);
-					continue;
-				}
-				const vy = cvr.top + b.y;
-				const dark = vy < charcoalBottom || (!!ft && vy >= ft.top && vy <= ft.bottom);
-				bctx.globalAlpha = dark ? 1 : 0.35;
-				bctx.fillStyle = inkForGround(b.c, dark);
-				bctx.fillRect(b.x, b.y, b.s, b.s);
-			}
-			bctx.globalAlpha = 1;
-		}
-
-		raf = requestAnimationFrame(frame);
-	}
-
-	function start() {
-		if (running) return;
-		running = true;
-		raf = requestAnimationFrame(frame);
-	}
-
-	function stop() {
-		running = false;
-		cancelAnimationFrame(raf);
-	}
-
-	function loadImage(src: string): Promise<HTMLImageElement> {
-		return new Promise((resolve, reject) => {
-			const im = new Image();
-			im.onload = () => resolve(im);
-			im.onerror = reject;
-			im.src = src;
-		});
-	}
-
-	function detectBeat(): string {
-		if (!document.querySelector('[data-particle-capability]')) return 'logo';
-		const line = window.innerHeight * 0.48;
-		const marks: [string, string][] = [
-			['capability', '[data-particle-capability]'],
-			['proof', '[data-particle-proof]'],
-			['reliability', '[data-particle-reliability]'],
-			['footer', '[data-footer]'],
-		];
-		let beat = 'logo';
-		for (const [id, sel] of marks) {
-			const el = document.querySelector(sel);
-			if (el && el.getBoundingClientRect().top < line) beat = id;
-		}
-		return beat;
-	}
-
-	function clearBeatTimers() {
-		if (capTimer) {
-			clearInterval(capTimer);
-			capTimer = null;
-		}
-		if (proofTimer) {
-			clearTimeout(proofTimer);
-			proofTimer = null;
-		}
-	}
-
-	function setSpin(on: boolean) {
-		spinEnabled = on;
-		rotSpeedTarget = on ? BASE_ROT : 0;
-	}
-
-	function startCapCycle(morph: boolean, align: SampleAlign) {
-		const icons = [webIcon, itIcon].filter((x): x is HTMLImageElement => x !== null);
-		if (icons.length === 0) {
-			sampleImage(img, 'shape', morph, align);
-			setSpin(false);
-			return;
-		}
-		capIndex = 0;
-		sampleImage(icons[0], 'shape', morph, align);
-		setSpin(true);
-		if (icons.length < 2) return;
-		capTimer = setInterval(() => {
-			if (currentBeat !== 'capability') return;
-			capIndex = (capIndex + 1) % icons.length;
-			sampleImage(icons[capIndex], 'shape', true, align);
-			setSpin(capIndex === 0);
-		}, 2800);
-	}
-
-	// PLACEHOLDER: once a real project screenshot exists, this beat should
-	// sample that photo with sampleImage(screenshot, 'photo', true) instead
-	// of these wireframe canvases. Photo mode will read stronger.
-	function drawLayout(finished: boolean): HTMLCanvasElement {
-		const c = document.createElement('canvas');
-		c.width = 800;
-		c.height = 560;
-		const g = c.getContext('2d')!;
-		g.strokeStyle = '#2C2C2A';
-		g.fillStyle = '#2C2C2A';
-		g.lineWidth = finished ? 10 : 5;
-		if (finished) {
-			g.fillRect(80, 48, 640, 56);
-			g.fillRect(80, 140, 300, 180);
-			g.fillRect(420, 140, 300, 80);
-			g.fillRect(420, 240, 300, 80);
-			g.fillRect(80, 360, 640, 120);
-		} else {
-			g.strokeRect(80, 48, 640, 56);
-			g.strokeRect(80, 140, 280, 160);
-			g.strokeRect(400, 140, 320, 80);
-		}
-		return c;
-	}
-
-	function startProof(morph: boolean, align: SampleAlign) {
-		sampleImage(drawLayout(false), 'shape', morph, align);
-		proofTimer = setTimeout(() => {
-			if (currentBeat !== 'proof') return;
-			sampleImage(drawLayout(true), 'shape', true, align);
-		}, 1800);
-	}
-
-	function drawTagline(): HTMLCanvasElement {
-		const c = document.createElement('canvas');
-		c.width = 1400;
-		c.height = 420;
-		const g = c.getContext('2d')!;
-		g.fillStyle = '#2C2C2A';
-		g.textAlign = 'center';
-		g.textBaseline = 'middle';
-		g.font = '800 64px Sora, Inter, sans-serif';
-		g.fillText("Built for what's now.", 700, 160);
-		g.fillText("Ready for what's next.", 700, 260);
-		return c;
-	}
-
-	function beatAlign(beat: string): SampleAlign {
-		if (beat === 'capability' || beat === 'reliability') return 'left';
-		if (beat === 'proof') return 'right';
-		return 'center';
-	}
-
-	function applyBeat(beat: string, morph: boolean) {
-		currentBeat = beat;
-		clearBeatTimers();
-		const align = beatAlign(beat);
-		if (beat === 'logo') setSpin(true);
-		else if (beat !== 'capability') setSpin(false);
-		if (beat === 'capability') startCapCycle(morph, align);
-		else if (beat === 'proof') startProof(morph, align);
-		else if (beat === 'reliability') sampleImage(relIcon ?? img, 'shape', morph, align);
-		else if (beat === 'footer') {
-			// Paint exactly once: immediately if fonts are already loaded,
-			// otherwise after fonts.ready. The old code painted twice (once
-			// per branch), rebuilding the tagline mid-flight and smearing it.
-			const paint = () => {
-				if (currentBeat === 'footer') sampleImage(drawTagline(), 'shape', morph, align, 'upper');
-			};
-			if (document.fonts?.status === 'loaded') paint();
-			else void document.fonts?.ready.then(paint);
-		}
-		else sampleImage(img, 'shape', morph, align);
-	}
-
-	// --- Interaction ---
-
-	let moveTimer: ReturnType<typeof setTimeout> | null = null;
-
-	document.addEventListener('pointermove', (e) => {
-		mouse.x = e.clientX;
-		mouse.y = e.clientY;
-		if (spinEnabled) rotSpeedTarget = FAST_ROT;
-		wanderTarget = FAST_WANDER;
-		if (moveTimer) clearTimeout(moveTimer);
-		moveTimer = setTimeout(() => {
-			rotSpeedTarget = spinEnabled ? BASE_ROT : 0;
-			wanderTarget = BASE_WANDER;
-		}, 600);
-	});
-	document.addEventListener('pointerleave', () => {
-		mouse.x = -9999;
-		mouse.y = -9999;
-	});
-	document.addEventListener('touchend', () => {
-		mouse.x = -9999;
-		mouse.y = -9999;
-	});
-
-	function spawnBurst(clientX: number, clientY: number) {
-		if (!burstCv) return;
-		const cvr = burstCv.getBoundingClientRect();
-		const x = clientX - cvr.left;
-		const y = clientY - cvr.top;
-		const count = W < 768 ? 48 : 72;
-		for (let i = 0; i < count; i++) {
-			const ang = Math.random() * Math.PI * 2;
-			const spd = 8 + Math.random() * 18;
-			const r = Math.random();
-			bursts.push({
-				x,
-				y,
-				vx: Math.cos(ang) * spd,
-				vy: Math.sin(ang) * spd,
-				s: 2 + Math.random() * 3.5,
-				c: r < 0.08 ? '#38B6FF' : r < 0.28 ? '#FF7870' : '#F2EFEB',
-			});
-		}
-		if (bursts.length > 420) bursts.splice(0, bursts.length - 420);
-	}
-
-	window.addEventListener('ipt:heroburst', ((e: Event) => {
-		const { x, y } = (e as CustomEvent<{ x: number; y: number }>).detail;
-		spawnBurst(x, y);
-	}) as EventListener);
-
-	// --- Init ---
-
-	function init() {
-		if (imgLoaded) return;
-		imgLoaded = true;
-		resize();
-		start();
-	}
+	const isProof = document.documentElement.classList.contains('is-proof');
 
 	if (prefersReduced) {
 		cv.style.display = 'none';
-		const imgEl = document.createElement('img');
-		imgEl.src = '/Iterate Prairie Tech Loop No BG.png';
-		imgEl.alt = '';
-		imgEl.style.cssText = 'position:absolute;inset:0;margin:auto;width:min(60vmin,80vw);height:auto;opacity:0.1;';
-		cv.parentElement?.insertBefore(imgEl, cv);
+		if (burstCv) burstCv.style.display = 'none';
+		if (!isProof) {
+			const imgEl = document.createElement('img');
+			imgEl.src = '/Iterate Prairie Tech Loop No BG.png';
+			imgEl.alt = '';
+			imgEl.style.cssText =
+				'position:absolute;inset:0;margin:auto;width:min(60vmin,80vw);height:auto;opacity:0.1;';
+			cv.parentElement?.insertBefore(imgEl, cv);
+		}
+	} else if (isProof) {
+		const engine = createParticleEngine({
+			canvas: cv,
+			burstCanvas: burstCv,
+			groundAware: true,
+			scatter: true,
+			pointerRoot: document,
+			pickColor: defaultPickColor,
+		});
+		engine.resize();
+		engine.start();
+		document.addEventListener('visibilitychange', () => {
+			if (document.hidden) engine.stop();
+			else engine.start();
+		});
+		let scatterResize: ReturnType<typeof setTimeout>;
+		window.addEventListener('resize', () => {
+			clearTimeout(scatterResize);
+			scatterResize = setTimeout(() => engine.resize(), 150);
+		});
 	} else {
+		let img: HTMLImageElement | null = null;
+		let webIcon: HTMLImageElement | null = null;
+		let itIcon: HTMLImageElement | null = null;
+		let relIcon: HTMLImageElement | null = null;
+		let currentBeat = 'logo';
+		let capTimer: ReturnType<typeof setInterval> | null = null;
+		let proofTimer: ReturnType<typeof setTimeout> | null = null;
+		let capIndex = 0;
+		let imgLoaded = false;
+
+		function pickColor(): string {
+			const r = Math.random();
+			const onCharcoalHero =
+				document.documentElement.classList.contains('is-home') && currentBeat === 'logo';
+			if (onCharcoalHero) {
+				if (r < 0.08) return '#38B6FF';
+				if (r < 0.28) return '#FF7870';
+				return '#F2EFEB';
+			}
+			if (r < 0.04) return '#38B6FF';
+			if (r < 0.16) return '#FF7870';
+			return '#2C2C2A';
+		}
+
+		const engine = createParticleEngine({
+			canvas: cv,
+			burstCanvas: burstCv,
+			groundAware: true,
+			scrollSpread: true,
+			pointerRoot: document,
+			pickColor,
+			getSpreadTarget: () => {
+				const beat = detectBeat();
+				if (beat !== currentBeat) applyBeat(beat, true);
+				if (currentBeat !== 'logo') return 0;
+				const scrollable = Math.max(
+					1,
+					document.documentElement.scrollHeight - window.innerHeight,
+				);
+				return Math.min(1, window.scrollY / scrollable / 0.33);
+			},
+		});
+
+		function detectBeat(): string {
+			if (!document.querySelector('[data-particle-capability]')) return 'logo';
+			const line = window.innerHeight * 0.48;
+			const marks: [string, string][] = [
+				['capability', '[data-particle-capability]'],
+				['proof', '[data-particle-proof]'],
+				['reliability', '[data-particle-reliability]'],
+				['footer', '[data-footer]'],
+			];
+			let beat = 'logo';
+			for (const [id, sel] of marks) {
+				const el = document.querySelector(sel);
+				if (el && el.getBoundingClientRect().top < line) beat = id;
+			}
+			return beat;
+		}
+
+		function clearBeatTimers() {
+			if (capTimer) {
+				clearInterval(capTimer);
+				capTimer = null;
+			}
+			if (proofTimer) {
+				clearTimeout(proofTimer);
+				proofTimer = null;
+			}
+		}
+
+		function startCapCycle(morph: boolean, align: SampleAlign) {
+			const icons = [webIcon, itIcon].filter((x): x is HTMLImageElement => x !== null);
+			if (icons.length === 0) {
+				engine.sampleImage(img, 'shape', morph, align);
+				engine.setSpin(false);
+				return;
+			}
+			capIndex = 0;
+			engine.sampleImage(icons[0], 'shape', morph, align);
+			engine.setSpin(true);
+			if (icons.length < 2) return;
+			capTimer = setInterval(() => {
+				if (currentBeat !== 'capability') return;
+				capIndex = (capIndex + 1) % icons.length;
+				engine.sampleImage(icons[capIndex], 'shape', true, align);
+				engine.setSpin(capIndex === 0);
+			}, 2800);
+		}
+
+		function drawLayout(finished: boolean): HTMLCanvasElement {
+			const c = document.createElement('canvas');
+			c.width = 800;
+			c.height = 560;
+			const g = c.getContext('2d')!;
+			g.strokeStyle = '#2C2C2A';
+			g.fillStyle = '#2C2C2A';
+			g.lineWidth = finished ? 10 : 5;
+			if (finished) {
+				g.fillRect(80, 48, 640, 56);
+				g.fillRect(80, 140, 300, 180);
+				g.fillRect(420, 140, 300, 80);
+				g.fillRect(420, 240, 300, 80);
+				g.fillRect(80, 360, 640, 120);
+			} else {
+				g.strokeRect(80, 48, 640, 56);
+				g.strokeRect(80, 140, 280, 160);
+				g.strokeRect(400, 140, 320, 80);
+			}
+			return c;
+		}
+
+		function startProof(morph: boolean, align: SampleAlign) {
+			engine.sampleImage(drawLayout(false), 'shape', morph, align);
+			proofTimer = setTimeout(() => {
+				if (currentBeat !== 'proof') return;
+				engine.sampleImage(drawLayout(true), 'shape', true, align);
+			}, 1800);
+		}
+
+		function drawTagline(): HTMLCanvasElement {
+			const c = document.createElement('canvas');
+			c.width = 1400;
+			c.height = 420;
+			const g = c.getContext('2d')!;
+			g.fillStyle = '#2C2C2A';
+			g.textAlign = 'center';
+			g.textBaseline = 'middle';
+			g.font = '800 64px Sora, Inter, sans-serif';
+			g.fillText("Built for what's now.", 700, 160);
+			g.fillText("Ready for what's next.", 700, 260);
+			return c;
+		}
+
+		function beatAlign(beat: string): SampleAlign {
+			if (beat === 'capability' || beat === 'reliability') return 'left';
+			if (beat === 'proof') return 'right';
+			return 'center';
+		}
+
+		function applyBeat(beat: string, morph: boolean) {
+			currentBeat = beat;
+			clearBeatTimers();
+			const align = beatAlign(beat);
+			if (beat === 'logo') engine.setSpin(true);
+			else if (beat !== 'capability') engine.setSpin(false);
+			if (beat === 'capability') startCapCycle(morph, align);
+			else if (beat === 'proof') startProof(morph, align);
+			else if (beat === 'reliability') engine.sampleImage(relIcon ?? img, 'shape', morph, align);
+			else if (beat === 'footer') {
+				const paint = () => {
+					if (currentBeat === 'footer') {
+						engine.sampleImage(drawTagline(), 'shape', morph, align, 'upper');
+					}
+				};
+				if (document.fonts?.status === 'loaded') paint();
+				else void document.fonts?.ready.then(paint);
+			} else engine.sampleImage(img, 'shape', morph, align);
+		}
+
+		function init() {
+			if (imgLoaded) return;
+			imgLoaded = true;
+			engine.resize();
+			applyBeat(currentBeat, false);
+			engine.start();
+		}
+
 		img = new Image();
 		img.onload = init;
 		img.src = '/Iterate Prairie Tech Loop No BG.png';
@@ -587,13 +243,15 @@
 			loadImage('/IPT - Services - Web Design.svg'),
 			loadImage('/IPT - Services - IT & Tech Support.svg'),
 			loadImage('/IPT - Reliability.svg'),
-		]).then(([web, it, rel]) => {
-			webIcon = web;
-			itIcon = it;
-			relIcon = rel;
-		}).catch(() => {
-			/* beat swaps fall back to the loop logo if an icon fails to load */
-		});
+		])
+			.then(([web, it, rel]) => {
+				webIcon = web;
+				itIcon = it;
+				relIcon = rel;
+			})
+			.catch(() => {
+				/* beat swaps fall back to the loop logo if an icon fails to load */
+			});
 
 		img.onerror = () => {
 			cv.style.display = 'none';
@@ -601,13 +259,22 @@
 		};
 
 		document.addEventListener('visibilitychange', () => {
-			if (document.hidden) stop(); else if (imgLoaded) start();
+			if (document.hidden) engine.stop();
+			else if (imgLoaded) engine.start();
 		});
 
 		let resizeTimer: ReturnType<typeof setTimeout>;
 		window.addEventListener('resize', () => {
 			clearTimeout(resizeTimer);
-			resizeTimer = setTimeout(resize, 150);
+			resizeTimer = setTimeout(() => {
+				engine.resize();
+				if (imgLoaded) applyBeat(currentBeat, true);
+			}, 150);
 		});
+
+		window.addEventListener('ipt:heroburst', ((e: Event) => {
+			const { x, y } = (e as CustomEvent<{ x: number; y: number }>).detail;
+			engine.spawnBurst(x, y);
+		}) as EventListener);
 	}
 </script>

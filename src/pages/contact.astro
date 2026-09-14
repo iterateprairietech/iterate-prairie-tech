@@ -138,6 +138,12 @@ import Footer from '../components/Footer.astro';
 	if (prefersReduced) {
 		gsap.set('[data-anim]', { opacity: 1, clearProps: 'transform' });
 	} else {
+		gsap.fromTo(
+			'.page-head [data-anim]',
+			{ y: 24 },
+			{ opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', delay: 0.15 },
+		);
+
 		const cards = gsap.utils.toArray<HTMLElement>('[data-contact] [data-card]');
 		gsap.fromTo(
 			cards,

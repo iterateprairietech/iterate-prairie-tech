@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Workflow
+
+- Make a plan first, split that plan into atomic actions with standalone
+  contexts, then execute each task in clear contexts. Don't batch unrelated
+  edits into one ambiguous pass.
+- Every element tagged `data-anim` is hidden (`opacity: 0`) until a script
+  reveals it. Any element you tag must be covered by a `gsap.fromTo`/`gsap.set`
+  in the same component's script, in both the normal and
+  `prefers-reduced-motion` branches. Check this before building.
+
 ## Stack
 
 - Astro 7, static output (`astro.config.mjs` is empty `defineConfig({})`; no SSR

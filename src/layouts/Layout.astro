@@ -19,7 +19,10 @@ const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
 ---
 
 <!doctype html>
-<html lang="en" class={activePath === '/' ? 'is-home' : undefined}>
+<html
+	lang="en"
+	class:list={[{ 'is-home': activePath === '/' }, { 'is-proof': activePath === '/proof' }]}
+>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
